@@ -377,12 +377,15 @@
         <!-- API SEND -->
         <div class="api-panel">
           <div class="api-panel-title">&#128640; Send to Chronos API</div>
-          <div class="api-row">
+          <div class="api-row" style="margin-bottom:7px">
             <select id="api-tenant">
               <option value="chronos_qa">chronos_qa — QA</option>
               <option value="client2">client2 — DEV2</option>
               <option value="zetes">zetes — PRD</option>
             </select>
+          </div>
+          <div class="api-row">
+            <input type="password" id="api-token" placeholder="Reference token…" style="flex:1;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12.5px;font-family:monospace;"/>
             <button class="btn btn-primary" onclick="sendToAPI()" id="btn-send-api" style="white-space:nowrap">&#128640; Send</button>
           </div>
           <div class="api-response" id="api-response"></div>
@@ -1459,17 +1462,14 @@ const API_TENANTS = {
   chronos_qa: {
     label: 'chronos_qa (QA)',
     url:   'https://chronos-api-qa.cloud.zetes.com/api/v1.0/maintenance/import',
-    token: 'D27629C8D8F025091F0FFA368B67719BC4BA1CB88C6CC822836B6E678CFA7FC2',
   },
   client2: {
     label: 'client2 (DEV2)',
     url:   'https://chronos-api-dev2-linux.azurewebsites.net/api/v1.0/maintenance/import',
-    token: 'D678A2BDF6EB5D767504F67DCAF8E71E67AD0912CE59B93C1FE4ECACDAAA992C',
   },
   zetes: {
     label: 'zetes (PRD)',
     url:   'https://chronos-api.cloud.zetes.com/api/v1.0/maintenance/import',
-    token: 'D216C0B057D86C15657F06F9FE5F1C1FFD1FC5ECDBB5228C562289AB79DAB48A',
   },
 };
 
@@ -1478,8 +1478,17 @@ async function sendToAPI() {
 
   const tenantKey = document.getElementById('api-tenant').value;
   const tenant    = API_TENANTS[tenantKey];
+  const token     = document.getElementById('api-token').value.trim();
   const resEl     = document.getElementById('api-response');
   const btn       = document.getElementById('btn-send-api');
+
+  if (!token) {
+    resEl.className = 'api-response err';
+    resEl.style.display = 'block';
+    resEl.innerHTML = '&#9888; Please enter the Reference Token before sending.';
+    document.getElementById('api-token').focus();
+    return;
+  }
 
   resEl.className = 'api-response loading';
   resEl.style.display = 'block';
@@ -1499,7 +1508,7 @@ async function sendToAPI() {
         // Content-Type is set automatically by fetch for FormData (with correct boundary)
         'Accept':        'application/json;odata.metadata=minimal;odata.streaming=true',
         'x-api-version': '2.0',
-        'Authorization': `Bearer ${tenant.token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: formData,
     });
