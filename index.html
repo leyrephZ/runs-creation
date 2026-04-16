@@ -271,6 +271,7 @@
   <div class="step" id="si2"><div class="step-circle">2</div><div class="step-label">Add Stops</div></div>
   <div class="connector" id="cn2"></div>
   <div class="step" id="si3"><div class="step-circle">3</div><div class="step-label">Export XML</div></div>
+  <button onclick="resetApp()" title="Reset all data and start over" style="margin-left:20px;padding:5px 13px;font-size:12px;font-weight:700;border:1.5px solid #e74c3c;color:#e74c3c;background:white;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;" onmouseover="this.style.background='#fdecea'" onmouseout="this.style.background='white'">&#x21BA; Reset</button>
 </div>
 
 <!-- MAIN -->
@@ -378,11 +379,17 @@
         <div class="api-panel">
           <div class="api-panel-title">&#128640; Send to Chronos API</div>
           <div class="api-row" style="margin-bottom:7px">
-            <select id="api-tenant">
+            <select id="api-tenant" onchange="onTenantChange()">
               <option value="chronos_qa">chronos_qa — QA</option>
               <option value="client2">client2 — DEV2</option>
               <option value="zetes">zetes — PRD</option>
+              <option value="other">Other…</option>
             </select>
+          </div>
+          <div id="api-custom-url-wrap" style="display:none;margin-bottom:7px">
+            <input type="url" id="api-custom-url"
+              value="https://OTHER_CHRONOS_URL.api.cloud.zetes.com/api/v1.0/maintenance/import"
+              style="width:100%;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12px;color:#2c3e50"/>
           </div>
           <div class="api-row">
             <input type="password" id="api-token" placeholder="Reference token…" style="flex:1;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12.5px;font-family:monospace;"/>
@@ -1333,6 +1340,50 @@ function closeBarcodeModal() {
   document.getElementById('barcode-modal').classList.remove('open');
 }
 
+// ── Tenant selector ────────────────────────────────────────
+function onTenantChange() {
+  const isOther = document.getElementById('api-tenant').value === 'other';
+  document.getElementById('api-custom-url-wrap').style.display = isOther ? 'block' : 'none';
+}
+
+// ── Reset app ──────────────────────────────────────────────
+function resetApp() {
+  if (!confirm('Reset everything? All stops, services and run settings will be cleared.')) return;
+
+  // Remove map markers and lines
+  if (S.site?.marker) map.removeLayer(S.site.marker);
+  S.stops.forEach(s => map.removeLayer(s.marker));
+  S.routeLines.forEach(l => map.removeLayer(l));
+
+  // Reset state
+  S.step = 1; S.site = null; S.stops = []; S.routeLines = [];
+  S.editStopId = null; S.nextId = 1; S.nextSvcId = 1;
+  S.lastDt = ''; S.lastSid = ''; S.lastRunExtId = '';
+  RUN_PHASES.forEach(p => { runPhaseActions[p.key] = emptyRunPhaseAct(); });
+  _xmlString = '';
+
+  // Reset form fields
+  ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId','api-token']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('runUnloadProcess').checked = true;
+  document.getElementById('site-coords-wrap').style.display = 'none';
+  document.getElementById('p1-warn').style.display = 'none';
+  document.getElementById('api-response').style.display = 'none';
+
+  // Re-init date and run name
+  const now = new Date();
+  const local = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('runDate').value = local;
+  const dt = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  document.getElementById('runName').value = `demorun_${dt}`;
+
+  // Rebuild UI
+  renderRunPhasesUI();
+  setStep(1);
+  setHint('Click on the map to place the warehouse.');
+  map.setView([48.5, 10.5], 5);
+}
+
 // ══════════════════════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════════════════════
@@ -1471,14 +1522,28 @@ const API_TENANTS = {
     label: 'zetes (PRD)',
     url:   'https://chronos-api.cloud.zetes.com/api/v1.0/maintenance/import',
   },
+  other: {
+    label: 'Other',
+    url:   null, // taken from #api-custom-url input
+  },
 };
 
 async function sendToAPI() {
   if (!_xmlString) { alert('Generate the XML first (go to step 3).'); return; }
 
-  const tenantKey = document.getElementById('api-tenant').value;
-  const tenant    = API_TENANTS[tenantKey];
-  const token     = document.getElementById('api-token').value.trim();
+  const tenantKey  = document.getElementById('api-tenant').value;
+  const tenant     = API_TENANTS[tenantKey];
+  const token      = document.getElementById('api-token').value.trim();
+  const requestUrl = tenantKey === 'other'
+    ? document.getElementById('api-custom-url').value.trim()
+    : tenant.url;
+
+  if (tenantKey === 'other' && !requestUrl) {
+    resEl.className = 'api-response err';
+    resEl.style.display = 'block';
+    resEl.innerHTML = '&#9888; Please enter a valid URL for the custom tenant.';
+    return;
+  }
   const resEl     = document.getElementById('api-response');
   const btn       = document.getElementById('btn-send-api');
 
@@ -1502,7 +1567,7 @@ async function sendToAPI() {
     const filename = `run_${S.lastSid||'export'}_${S.lastDt||'now'}.xml`;
     formData.append('importFile', xmlBlob, filename);
 
-    const res = await fetch(tenant.url, {
+    const res = await fetch(requestUrl, {
       method:  'POST',
       headers: {
         // Content-Type is set automatically by fetch for FormData (with correct boundary)
