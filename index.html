@@ -275,7 +275,8 @@
     <div style="display:flex;align-items:center;gap:0;border:1.5px solid #d16c19;border-radius:7px;overflow:hidden;background:white;">
       <button onclick="createQuickRun()" title="Create a random demo run near Madrid" style="padding:5px 11px;font-size:12px;font-weight:700;color:#d16c19;background:white;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='#fef4ec'" onmouseout="this.style.background='white'">&#9889; Quick Run</button>
       <div style="width:1px;background:#d16c19;align-self:stretch;opacity:.4"></div>
-      <input id="quick-run-stops" type="number" min="1" value="3" title="Number of stops" style="width:38px;padding:5px 4px;font-size:12px;font-weight:700;color:#d16c19;border:none;outline:none;text-align:center;background:white;" onmouseover="this.style.background='#fef4ec'" onmouseout="this.style.background='white'"/>
+      <input id="quick-run-stops" type="number" min="1" value="3" title="Number of stops" style="width:52px;padding:5px 4px;font-size:12px;font-weight:700;color:#d16c19;border:none;outline:none;text-align:center;background:white;" onmouseover="this.style.background='#fef4ec'" onmouseout="this.style.background='white'"/>
+      <span style="font-size:11px;font-weight:700;color:#d16c19;padding-right:9px;padding-left:2px;white-space:nowrap">stops</span>
     </div>
     <button onclick="resetApp()" title="Reset all data and start over" style="padding:5px 13px;font-size:12px;font-weight:700;border:1.5px solid #e74c3c;color:#e74c3c;background:white;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;" onmouseover="this.style.background='#fdecea'" onmouseout="this.style.background='white'">&#x21BA; Reset</button>
   </div>
@@ -1440,7 +1441,7 @@ function createQuickRun() {
   // 1 deg lat ≈ 111 km, 1 deg lng ≈ 83 km at Madrid latitude
   const baseAngle = Math.random() * 360;
   const stopPos = (i) => {
-    const r = 0.17 + Math.random() * 0.04; // ~18–23 km
+    const r = 0.045 + Math.random() * 0.155; // ~5–22 km (anywhere between site and max radius)
     const a = (baseAngle + (360 / numStops) * i + (Math.random() - 0.5) * 20) * Math.PI / 180;
     return { dlat: Math.sin(a) * r, dlng: Math.cos(a) * r * (111 / 83) };
   };
