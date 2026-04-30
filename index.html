@@ -1129,6 +1129,7 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
         <ExternalId>${escX(extId)}</ExternalId>
         <RunId>${escX(runId)}</RunId>
         <Sequence>${stopSeq}</Sequence>
+        <CustomerName>${stopId}</CustomerName>
         <StopId>${stopId}</StopId>
         <StopName>${stopId}</StopName>${addrBlock(stop)}
         <GPSPoints>
@@ -1151,6 +1152,7 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
         <ExternalId>${escX(extId)}</ExternalId>
         <RunId>${escX(runId)}</RunId>
         <Sequence>${stopSeq}</Sequence>
+        <CustomerName>${stopId}</CustomerName>
         <StopId>${stopId}</StopId>
         <StopName>${stopId}</StopName>${addrBlock(stop)}
         <GPSPoints>
@@ -1167,8 +1169,8 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
 // XML VALIDATION (internal)
 // ══════════════════════════════════════════════════════════════
 const ACT_XSD_ORDER  = ['TakeAPictureImport','SignatureImport','ChargeOfDelivery','ProofOfPresence','Comment','Asset','Questionnaire','PinCode','ScanDocument','OpenLink'];
-const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','StopId','StopName','Address','GPSPoints','Status','DeliveryType','ItemListImport','Actions'];
-const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
+const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','StopId','StopName','Address','GPSPoints','Status','DeliveryType','ItemListImport','Actions'];
+const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
 const SVC_LIST_ORDER  = ['CollectionListImport','DeliveryListImport'];
 
 function checkOrder(children, expected, ctx) {
@@ -1447,9 +1449,19 @@ function createQuickRun() {
   };
 
   // 3 service templates — cycled via modulo so any number of stops works
-  const NAMES   = ['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta','Iota','Kappa',
-                   'Lambda','Mu','Nu','Xi','Omicron','Pi','Rho','Sigma','Tau','Upsilon'];
-  const getName = (i) => `Customer ${NAMES[i] || (i + 1)}`;
+  const CUST_NAMES = [
+    'Acme Corp','Blue Horizon Ltd','Cedar Logistics','Delta Foods','Everest Retail',
+    'Falcon Supplies','Greenway Markets','Harbor Goods','Ironclad Parts','Jasper Traders',
+    'Keystone Depot','Lumina Store','Maple Wholesale','Nordic Supplies','Orbit Commerce',
+    'Peak Distributors','Quantum Retail','Redwood Exports','Summit Goods','Titan Logistics',
+    'Ulysses Trade','Vega Markets','Westfield Hub','Xenon Parts','Yonder Supplies',
+    'Zenith Corp','Atlas Imports','Bravo Foods','Crimson Depot','Dover Retail',
+    'Eagle Wholesale','Frost Traders','Gravel & Sons','Helix Supplies','Indigo Logistics',
+    'Jade Commerce','Kinetic Parts','Lancer Depot','Metro Goods','Nova Retail',
+  ];
+  // shuffle a copy so names don't repeat in the same run
+  const _shuffled = [...CUST_NAMES].sort(() => Math.random() - 0.5);
+  const getName = (i) => _shuffled[i % _shuffled.length];
 
   const TEMPLATES = [
     // Template 0 — 1 delivery (signature + picture) + 1 collection (allowUnknown)
