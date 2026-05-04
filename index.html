@@ -522,8 +522,8 @@ const emptyColAct = () => ({
   link:      { enabled:false, url:'' },
 });
 
-const newDel = () => ({ svcId:S.nextSvcId++, items:1, actions:emptyDelAct() });
-const newCol = () => ({ svcId:S.nextSvcId++, items:1, allowUnknown:false, actions:emptyColAct() });
+const newDel = () => ({ svcId:S.nextSvcId++, items:1, pta:'', actions:emptyDelAct() });
+const newCol = () => ({ svcId:S.nextSvcId++, items:1, allowUnknown:false, pta:'', actions:emptyColAct() });
 
 // ══════════════════════════════════════════════════════════════
 // MAP — CartoDB tiles (no referer restriction)
@@ -1129,7 +1129,7 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
         <ExternalId>${escX(extId)}</ExternalId>
         <RunId>${escX(runId)}</RunId>
         <Sequence>${stopSeq}</Sequence>
-        <CustomerName>${stopId}</CustomerName>
+        <CustomerName>${stopId}</CustomerName>${svc.pta ? `\n        <PTA>${escX(svc.pta)}</PTA>` : ''}
         <StopId>${stopId}</StopId>
         <StopName>${stopId}</StopName>${addrBlock(stop)}
         <GPSPoints>
@@ -1152,7 +1152,7 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
         <ExternalId>${escX(extId)}</ExternalId>
         <RunId>${escX(runId)}</RunId>
         <Sequence>${stopSeq}</Sequence>
-        <CustomerName>${stopId}</CustomerName>
+        <CustomerName>${stopId}</CustomerName>${svc.pta ? `\n        <PTA>${escX(svc.pta)}</PTA>` : ''}
         <StopId>${stopId}</StopId>
         <StopName>${stopId}</StopName>${addrBlock(stop)}
         <GPSPoints>
@@ -1169,8 +1169,8 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
 // XML VALIDATION (internal)
 // ══════════════════════════════════════════════════════════════
 const ACT_XSD_ORDER  = ['TakeAPictureImport','SignatureImport','ChargeOfDelivery','ProofOfPresence','Comment','Asset','Questionnaire','PinCode','ScanDocument','OpenLink'];
-const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','StopId','StopName','Address','GPSPoints','Status','DeliveryType','ItemListImport','Actions'];
-const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
+const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','DeliveryType','ItemListImport','Actions'];
+const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
 const SVC_LIST_ORDER  = ['CollectionListImport','DeliveryListImport'];
 
 function checkOrder(children, expected, ctx) {
@@ -1517,11 +1517,23 @@ function createQuickRun() {
     });
   }
 
-  // 7. Zoom map to fit all points
+  // 7. Assign PTAs — run date + 30 min per stop, distributed across all stops
+  const runDateVal = document.getElementById('runDate').value; // "YYYY-MM-DDTHH:MM"
+  if (runDateVal) {
+    const runMs = new Date(runDateVal).getTime();
+    S.stops.forEach((stop, idx) => {
+      const ptaMs  = runMs + (idx + 1) * 30 * 60 * 1000; // +30 min per stop
+      const ptaDate = new Date(ptaMs);
+      const ptaStr  = `${ptaDate.getFullYear()}-${pad(ptaDate.getMonth()+1)}-${pad(ptaDate.getDate())}T${pad(ptaDate.getHours())}:${pad(ptaDate.getMinutes())}:00`;
+      [...stop.deliveries, ...stop.collections].forEach(svc => { svc.pta = ptaStr; });
+    });
+  }
+
+  // 8. Zoom map to fit all points
   const allPts = [[siteLat, siteLng], ...S.stops.map(s => [s.lat, s.lng])];
   map.fitBounds(L.latLngBounds(allPts).pad(0.3));
 
-  // 8. Jump straight to step 3 (XML preview)
+  // 9. Jump straight to step 3 (XML preview)
   updateRoute();
   setStep(3);
   setHint('');
