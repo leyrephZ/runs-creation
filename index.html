@@ -402,6 +402,7 @@
           <div class="api-row">
             <input type="password" id="api-token" placeholder="Reference token…" style="flex:1;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12.5px;font-family:monospace;"/>
             <button class="btn btn-primary" onclick="sendToAPI()" id="btn-send-api" style="white-space:nowrap">&#128640; Send</button>
+            <button class="btn" onclick="cancelAPI()" id="btn-cancel-api" style="display:none;white-space:nowrap;background:#fdecea;color:#c0392b;border:1.5px solid #f5b7b1">&#9632; Cancel</button>
           </div>
           <div class="api-response" id="api-response"></div>
         </div>
@@ -1683,6 +1684,12 @@ const API_TENANTS = {
   },
 };
 
+let _apiAbortCtrl = null;
+
+function cancelAPI() {
+  if (_apiAbortCtrl) { _apiAbortCtrl.abort(); _apiAbortCtrl = null; }
+}
+
 async function sendToAPI() {
   if (!_xmlString) { alert('Generate the XML first (go to step 3).'); return; }
 
@@ -1693,14 +1700,16 @@ async function sendToAPI() {
     ? document.getElementById('api-custom-url').value.trim()
     : tenant.url;
 
+  const resEl     = document.getElementById('api-response');
+  const btn       = document.getElementById('btn-send-api');
+  const btnCancel = document.getElementById('btn-cancel-api');
+
   if (tenantKey === 'other' && !requestUrl) {
     resEl.className = 'api-response err';
     resEl.style.display = 'block';
     resEl.innerHTML = '&#9888; Please enter a valid URL for the custom tenant.';
     return;
   }
-  const resEl     = document.getElementById('api-response');
-  const btn       = document.getElementById('btn-send-api');
 
   if (!token) {
     resEl.className = 'api-response err';
@@ -1710,13 +1719,14 @@ async function sendToAPI() {
     return;
   }
 
+  _apiAbortCtrl = new AbortController();
   resEl.className = 'api-response loading';
   resEl.style.display = 'block';
   resEl.textContent = `⏳ Sending to ${tenant.label}…`;
   btn.disabled = true;
+  btnCancel.style.display = '';
 
   try {
-    // Build multipart/form-data — field name "importFile", type text/xml
     const formData = new FormData();
     const xmlBlob  = new Blob([_xmlString], { type: 'text/xml' });
     const filename = `run_${S.lastSid||'export'}_${S.lastDt||'now'}.xml`;
@@ -1725,12 +1735,12 @@ async function sendToAPI() {
     const res = await fetch(requestUrl, {
       method:  'POST',
       headers: {
-        // Content-Type is set automatically by fetch for FormData (with correct boundary)
         'Accept':        'application/json;odata.metadata=minimal;odata.streaming=true',
         'x-api-version': '2.0',
         'Authorization': `Bearer ${token}`,
       },
-      body: formData,
+      body:   formData,
+      signal: _apiAbortCtrl.signal,
     });
 
     const text = await res.text().catch(() => '');
@@ -1745,11 +1755,18 @@ async function sendToAPI() {
         <span style="font-size:11px;word-break:break-all">${escHtml(text||'(no body)')}</span>`;
     }
   } catch (err) {
-    resEl.className = 'api-response err';
-    resEl.innerHTML = `&#10060; <strong>Network error</strong> — ${escHtml(err.message)}<br/>
-      <span style="font-size:11px">Check CORS policy or network connectivity.</span>`;
+    if (err.name === 'AbortError') {
+      resEl.className = 'api-response err';
+      resEl.innerHTML = '&#9726; <strong>Request cancelled.</strong>';
+    } else {
+      resEl.className = 'api-response err';
+      resEl.innerHTML = `&#10060; <strong>Network error</strong> — ${escHtml(err.message)}<br/>
+        <span style="font-size:11px">Check CORS policy or network connectivity.</span>`;
+    }
   } finally {
     btn.disabled = false;
+    btnCancel.style.display = 'none';
+    _apiAbortCtrl = null;
   }
 }
 
