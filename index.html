@@ -136,6 +136,15 @@
     .sum-val { font-size:18px; font-weight:800; color:#12182c; line-height:1; }
     .sum-label { font-size:10px; color:#5d6d7e; margin-top:2px; }
 
+    /* STEP 1 COLLAPSIBLE SECTIONS */
+    .step-section { border:1.5px solid #d0e0f5; border-radius:8px; margin-bottom:8px; overflow:hidden; }
+    .step-sec-head { padding:9px 13px; display:flex; align-items:center; gap:8px; background:#f0f6ff; cursor:pointer; user-select:none; border:none; width:100%; text-align:left; transition:background .15s; }
+    .step-sec-head:hover { background:#e0ecfb; }
+    .step-sec-title { font-size:12.5px; font-weight:700; color:#19427C; flex:1; display:flex; align-items:center; gap:6px; }
+    .step-sec-badge { font-size:10px; font-weight:600; color:#5d6d7e; background:#dde9f7; border-radius:3px; padding:2px 6px; white-space:nowrap; max-width:130px; overflow:hidden; text-overflow:ellipsis; }
+    .step-sec-caret { font-size:10px; color:#7f8c8d; transition:transform .2s; display:inline-block; }
+    .step-sec-body { padding:12px 14px 6px; border-top:1.5px solid #d0e0f5; }
+
     /* XML AREA */
     .xml-area { background:#0d1b2a; border-radius:7px; padding:12px; font-family:'Consolas','Courier New',monospace; font-size:11px; color:#a8d8ea; white-space:pre; overflow:auto; max-height:280px; line-height:1.5; }
 
@@ -311,67 +320,90 @@
 
       <!-- PANEL 1 -->
       <div class="panel active" id="p1">
-        <div class="info-box"><p>&#128205; <strong>Click on the map</strong> to place the warehouse, then complete the fields below.</p></div>
 
-        <div class="form-group">
-          <label>Site External ID *</label>
-          <input type="text" id="siteId" placeholder="e.g. WAREHOUSE_MAD_01" oninput="onSiteIdChange()" autocomplete="off"/>
-          <div class="hint">Unique site identifier in Chronos</div>
-        </div>
-
-        <div class="form-group">
-          <label>Visual Address <span style="font-weight:400;color:#95a5a6">(display only)</span></label>
-          <input type="text" id="siteAddr" placeholder="Auto-filled when you click the map" autocomplete="off"/>
-          <div class="hint">Not exported to XML</div>
-        </div>
-
-        <div id="site-coords-wrap" style="display:none">
-          <div class="form-group">
-            <label>Coordinates</label>
-            <input type="text" id="siteCoords" readonly style="background:#f7faff;color:#5d6d7e;"/>
+        <!-- ① SITE ──────────────────────────────────────────── -->
+        <div class="step-section">
+          <button class="step-sec-head" onclick="toggleStepSection('site')">
+            <span class="step-sec-title">&#128205; Site</span>
+            <span class="step-sec-badge" id="badge-site" style="display:none"></span>
+            <span class="step-sec-caret" id="caret-site" style="transform:rotate(180deg)">&#9660;</span>
+          </button>
+          <div class="step-sec-body" id="body-site">
+            <div class="info-box" style="margin-bottom:12px"><p>&#128205; <strong>Click on the map</strong> to place the warehouse, then fill the ID below.</p></div>
+            <div class="form-group">
+              <label>Site External ID *</label>
+              <input type="text" id="siteId" placeholder="e.g. WAREHOUSE_MAD_01" oninput="onSiteIdChange()" autocomplete="off"/>
+              <div class="hint">Unique site identifier in Chronos</div>
+            </div>
+            <div class="form-group">
+              <label>Visual Address <span style="font-weight:400;color:#95a5a6">(display only)</span></label>
+              <input type="text" id="siteAddr" placeholder="Auto-filled when you click the map" autocomplete="off"/>
+              <div class="hint">Not exported to XML</div>
+            </div>
+            <div id="site-coords-wrap" style="display:none">
+              <div class="form-group">
+                <label>Coordinates</label>
+                <input type="text" id="siteCoords" readonly style="background:#f7faff;color:#5d6d7e;"/>
+              </div>
+            </div>
           </div>
         </div>
 
-        <hr class="sect-divider"/>
-        <div class="sec-title">&#9881; Run Settings</div>
-
-        <div class="form-group">
-          <label>Run Name <span style="font-weight:400;color:#95a5a6">(modifiable)</span></label>
-          <input type="text" id="runName" placeholder="Auto-filled on load" autocomplete="off"/>
-          <div class="hint">Exported as &lt;Name&gt; — defaults to run timestamp without Site ID</div>
-        </div>
-
-        <div class="form-group">
-          <label>Run Date &amp; Time</label>
-          <input type="datetime-local" id="runDate"/>
-          <div class="hint">Exported as &lt;RunDate&gt; in the XML</div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Driver <span style="font-weight:400;color:#95a5a6">(optional)</span></label>
-            <input type="text" id="runDriver" placeholder="Driver name" autocomplete="off"/>
+        <!-- ② RUN SETTINGS ──────────────────────────────────── -->
+        <div class="step-section">
+          <button class="step-sec-head" onclick="toggleStepSection('run-settings')">
+            <span class="step-sec-title">&#9881; Run Settings</span>
+            <span class="step-sec-badge" id="badge-run-settings" style="display:none"></span>
+            <span class="step-sec-caret" id="caret-run-settings" style="transform:rotate(180deg)">&#9660;</span>
+          </button>
+          <div class="step-sec-body" id="body-run-settings">
+            <div class="form-group">
+              <label>Run Name <span style="font-weight:400;color:#95a5a6">(modifiable)</span></label>
+              <input type="text" id="runName" placeholder="Auto-filled on load" autocomplete="off"/>
+              <div class="hint">Exported as &lt;Name&gt;</div>
+            </div>
+            <!-- Run Date + Unload Process on same row -->
+            <div class="form-row" style="align-items:center;gap:8px;margin-bottom:13px">
+              <div class="form-group" style="flex:1;margin-bottom:0">
+                <label>Run Date &amp; Time</label>
+                <input type="datetime-local" id="runDate" style="width:100%"/>
+              </div>
+              <div style="flex-shrink:0;padding-top:18px">
+                <div class="allow-unknown-row" style="margin-bottom:0;padding:6px 10px">
+                  <input type="checkbox" id="runUnloadProcess" checked style="accent-color:#19427C;width:14px;height:14px"/>
+                  <label for="runUnloadProcess" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer;white-space:nowrap">Unload</label>
+                </div>
+              </div>
+            </div>
+            <!-- Driver + Vehicle + Tag on same row -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>Driver <span style="font-weight:400;color:#95a5a6;font-size:10px">opt.</span></label>
+                <input type="text" id="runDriver" placeholder="Driver name" autocomplete="off"/>
+              </div>
+              <div class="form-group">
+                <label>Vehicle <span style="font-weight:400;color:#95a5a6;font-size:10px">opt.</span></label>
+                <input type="text" id="runVehicle" placeholder="Vehicle ID" autocomplete="off"/>
+              </div>
+              <div class="form-group">
+                <label>Tag ID <span style="font-weight:400;color:#95a5a6;font-size:10px">opt.</span></label>
+                <input type="text" id="runTagId" placeholder="Tag ID" autocomplete="off"/>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Vehicle <span style="font-weight:400;color:#95a5a6">(optional)</span></label>
-            <input type="text" id="runVehicle" placeholder="Vehicle ID" autocomplete="off"/>
+        </div>
+
+        <!-- ③ RUN-LEVEL ACTIONS ──────────────────────────────── -->
+        <div class="step-section">
+          <button class="step-sec-head" onclick="toggleStepSection('run-actions')">
+            <span class="step-sec-title">&#9654; Run-Level Actions</span>
+            <span class="step-sec-badge" id="badge-run-actions" style="display:none"></span>
+            <span class="step-sec-caret" id="caret-run-actions">&#9660;</span>
+          </button>
+          <div class="step-sec-body" id="body-run-actions" style="display:none">
+            <div id="run-phases-ui"></div>
           </div>
         </div>
-
-        <div class="form-group">
-          <label>Tag ID <span style="font-weight:400;color:#95a5a6">(optional)</span></label>
-          <input type="text" id="runTagId" placeholder="Chronos tag identifier" autocomplete="off"/>
-          <div class="hint">Exported as &lt;TagId&gt; inside &lt;RunImport&gt;</div>
-        </div>
-
-        <div class="allow-unknown-row" style="margin-bottom:13px">
-          <input type="checkbox" id="runUnloadProcess" checked style="accent-color:#19427C;width:14px;height:14px"/>
-          <label for="runUnloadProcess" style="font-size:12.5px;font-weight:600;color:#34495e;cursor:pointer">Unload Process</label>
-        </div>
-
-        <hr class="sect-divider"/>
-        <div class="sec-title">&#9654; Run-Level Actions</div>
-        <div id="run-phases-ui"></div>
 
         <div id="p1-warn" class="warn-box">&#9888; Please place the warehouse on the map and enter a Site External ID.</div>
       </div>
@@ -937,6 +969,43 @@ function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
   document.getElementById('sidebar-tab').innerHTML = sidebarOpen ? '&#9664;' : '&#9654;';
   setTimeout(() => map.invalidateSize(), 260);
+}
+
+// ══════════════════════════════════════════════════════════════
+// STEP 1 — COLLAPSIBLE SECTIONS
+// ══════════════════════════════════════════════════════════════
+function toggleStepSection(id) {
+  const body  = document.getElementById(`body-${id}`);
+  const caret = document.getElementById(`caret-${id}`);
+  const badge = document.getElementById(`badge-${id}`);
+  if (!body) return;
+  const opening = body.style.display === 'none';
+  body.style.display  = opening ? 'block' : 'none';
+  if (caret) caret.style.transform = opening ? 'rotate(180deg)' : '';
+  // Show a summary badge in the header when collapsed
+  if (badge) {
+    if (!opening) {
+      const txt = getStepSectionBadge(id);
+      if (txt) { badge.textContent = txt; badge.style.display = ''; }
+      else       badge.style.display = 'none';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+function getStepSectionBadge(id) {
+  if (id === 'site') {
+    const sid = document.getElementById('siteId')?.value?.trim();
+    return sid || (S.site ? '📍 placed' : '');
+  }
+  if (id === 'run-settings') {
+    return document.getElementById('runName')?.value?.trim() || '';
+  }
+  if (id === 'run-actions') {
+    const active = RUN_PHASES.filter(p => Object.values(runPhaseActions[p.key]).some(a=>a.enabled)).length;
+    return active ? `${active} phase${active>1?'s':''} active` : '';
+  }
+  return '';
 }
 
 // ══════════════════════════════════════════════════════════════
