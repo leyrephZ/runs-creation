@@ -129,10 +129,12 @@
     .icon-btn-del:hover { background:#f5b7b1; }
 
     /* SUMMARY */
-    .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:14px; }
-    .sum-card { background:#e8f0fb; border-radius:7px; padding:11px; text-align:center; }
-    .sum-val { font-size:22px; font-weight:800; color:#12182c; }
-    .sum-label { font-size:10.5px; color:#5d6d7e; margin-top:2px; }
+    .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
+    .sum-card { background:white; border:1.5px solid #d0e0f5; border-left:4px solid #19427C; border-radius:7px; padding:8px 10px; display:flex; align-items:center; gap:8px; }
+    .sum-card.orange { border-left-color:#d16c19; }
+    .sum-card-icon { font-size:16px; line-height:1; }
+    .sum-val { font-size:18px; font-weight:800; color:#12182c; line-height:1; }
+    .sum-label { font-size:10px; color:#5d6d7e; margin-top:2px; }
 
     /* XML AREA */
     .xml-area { background:#0d1b2a; border-radius:7px; padding:12px; font-family:'Consolas','Courier New',monospace; font-size:11px; color:#a8d8ea; white-space:pre; overflow:auto; max-height:280px; line-height:1.5; }
@@ -161,8 +163,10 @@
 
     /* SERVICE CARD */
     .svc-card { border:1.5px solid #d0e0f5; border-radius:8px; margin-bottom:8px; overflow:hidden; }
-    .svc-card-head { padding:9px 12px; display:flex; align-items:center; gap:9px; background:#f7faff; }
+    .svc-card-head { padding:9px 12px; display:flex; align-items:center; gap:9px; background:#f7faff; cursor:pointer; user-select:none; }
+    .svc-card-head:hover { background:#edf4ff; }
     .svc-card-label { font-size:12.5px; font-weight:700; color:#19427C; flex:1; }
+    .svc-card-chevron { font-size:9px; color:#5d6d7e; transition:transform .2s; }
     .svc-card-body { padding:12px; border-top:1.5px solid #d0e0f5; }
     .counter-inline { display:flex; align-items:center; gap:6px; }
     .counter-inline span { font-size:11.5px; color:#5d6d7e; }
@@ -271,11 +275,11 @@
 
 <!-- STEPS -->
 <div class="steps-bar">
-  <div class="step active" id="si1"><div class="step-circle">1</div><div class="step-label">Define Warehouse</div></div>
+  <div class="step active" id="si1" onclick="navigateToStep(1)" style="cursor:pointer" title="Go to step 1"><div class="step-circle">1</div><div class="step-label">Define Warehouse</div></div>
   <div class="connector" id="cn1"></div>
-  <div class="step" id="si2"><div class="step-circle">2</div><div class="step-label">Add Stops</div></div>
+  <div class="step" id="si2" onclick="navigateToStep(2)" style="cursor:pointer" title="Go to step 2"><div class="step-circle">2</div><div class="step-label">Add Stops</div></div>
   <div class="connector" id="cn2"></div>
-  <div class="step" id="si3"><div class="step-circle">3</div><div class="step-label">Export XML</div></div>
+  <div class="step" id="si3" onclick="navigateToStep(3)" style="cursor:pointer" title="Go to step 3"><div class="step-circle">3</div><div class="step-label">Export XML</div></div>
   <div style="margin-left:20px">
     <button onclick="resetApp()" title="Reset all data and start over" style="padding:5px 13px;font-size:12px;font-weight:700;border:1.5px solid #e74c3c;color:#e74c3c;background:white;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;" onmouseover="this.style.background='#fdecea'" onmouseout="this.style.background='white'">&#x21BA; Reset</button>
   </div>
@@ -375,9 +379,14 @@
       <!-- PANEL 2 -->
       <div class="panel" id="p2">
         <div id="site-mini-card" class="site-card" style="display:none">
-          <div class="site-card-label">&#127981; Warehouse (Site)</div>
-          <div class="site-card-id" id="sc-id">—</div>
-          <div class="site-card-addr" id="sc-addr">—</div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div>
+              <div class="site-card-label">&#127981; Warehouse (Site)</div>
+              <div class="site-card-id" id="sc-id">—</div>
+              <div class="site-card-addr" id="sc-addr">—</div>
+            </div>
+            <button onclick="navigateToStep(1)" style="padding:4px 9px;font-size:11px;font-weight:700;border:1.5px solid #b8cfec;border-radius:5px;background:white;color:#19427C;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Edit warehouse settings">&#9998; Edit</button>
+          </div>
         </div>
         <div class="info-box"><p>&#128205; <strong>Click anywhere on the map</strong> to add a stop. Drag to reorder. Click &#9881; to configure services.</p></div>
         <div class="sec-title"><span>&#128068;</span> Route Stops <span style="margin-left:auto;font-size:11px;color:#7f8c8d;font-weight:500" id="stop-count-lbl"></span></div>
@@ -388,19 +397,18 @@
       <!-- PANEL 3 -->
       <div class="panel" id="p3">
         <div id="summary-grid" class="summary-grid"></div>
-        <button class="btn btn-outline btn-full" style="margin-bottom:12px" onclick="openBarcodeModal()">&#128203; View Run Summary &amp; Barcodes</button>
-        <div style="margin-bottom:10px;display:flex;gap:7px">
-          <button class="btn btn-outline" style="flex:1" onclick="copyXML()">&#128203; Copy XML</button>
-          <button class="btn btn-orange" onclick="downloadXML()">&#11015; Download XML</button>
-        </div>
+        <button onclick="openBarcodeModal()" style="margin-bottom:10px;padding:5px 13px;font-size:12px;font-weight:700;border:1.5px solid #b8cfec;border-radius:6px;background:white;color:#19427C;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;" onmouseover="this.style.background='#e8f0fb'" onmouseout="this.style.background='white'">&#128203; View Summary &amp; Barcodes</button>
 
-        <!-- Collapsible XML preview -->
+        <!-- Collapsible XML preview with Copy/Download in header -->
         <div style="border:1.5px solid #b8cfec;border-radius:7px;overflow:hidden;margin-bottom:4px">
-          <button onclick="toggleXmlPreview()" id="xml-toggle-btn"
-            style="width:100%;padding:8px 12px;background:#f0f6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#19427C;">
-            <span>&#128196; XML Preview</span>
-            <span id="xml-toggle-icon" style="font-size:10px;transition:transform .2s">&#9660;</span>
-          </button>
+          <div style="background:#f0f6ff;display:flex;align-items:center;padding:0 4px 0 12px;gap:4px">
+            <span style="flex:1;font-size:12px;font-weight:700;color:#19427C;">&#128196; XML Preview</span>
+            <button onclick="copyXML()" style="padding:5px 10px;font-size:11px;font-weight:700;border:1.5px solid #b8cfec;border-radius:5px;background:white;color:#19427C;cursor:pointer;white-space:nowrap;margin:5px 0;" onmouseover="this.style.background='#e8f0fb'" onmouseout="this.style.background='white'">&#128203; Copy</button>
+            <button onclick="downloadXML()" style="padding:5px 10px;font-size:11px;font-weight:700;border:none;border-radius:5px;background:#d16c19;color:white;cursor:pointer;white-space:nowrap;margin:5px 0;" onmouseover="this.style.background='#b05514'" onmouseout="this.style.background='#d16c19'">&#11015; Download</button>
+            <button onclick="toggleXmlPreview()" id="xml-toggle-btn" style="width:30px;height:30px;border:none;background:transparent;cursor:pointer;color:#5d6d7e;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:5px 0;">
+              <span id="xml-toggle-icon" style="transition:transform .2s;display:inline-block">&#9660;</span>
+            </button>
+          </div>
           <div id="xml-collapsible" style="display:none">
             <div id="val-result" class="val-result" style="margin:8px 10px 0"></div>
             <div class="xml-area" id="xml-preview" style="margin:6px 0 0;border-radius:0;max-height:340px"></div>
@@ -769,11 +777,12 @@ function actBodyHtml(key, act, sid, type) {
   return '';
 }
 
-function renderSvcCard(svc, type, idx) {
+function renderSvcCard(svc, type, idx, collapsed=false) {
   const sid   = svc.svcId;
   const label = type==='del' ? `Delivery ${idx+1}` : `Collection ${idx+1}`;
+  const enabledActs = Object.values(svc.actions).filter(a=>a.enabled).length;
+  const subtitle = `${svc.items} item${svc.items!==1?'s':''}${enabledActs?' · '+enabledActs+' action'+(enabledActs!==1?'s':''):''}${type==='col'&&svc.allowUnknown?' · unplanned':''}`;
 
-  // AllowCollectingUnknownItems — collection only
   const unknownToggle = type==='col' ? `
     <div class="allow-unknown-row">
       <input type="checkbox" id="acu-${sid}" ${svc.allowUnknown?'checked':''} onchange="updAllowUnknown(${sid},this.checked)"/>
@@ -783,7 +792,7 @@ function renderSvcCard(svc, type, idx) {
   let actRows = '';
   for (const [key, def] of Object.entries(ACT_DEF)) {
     const act  = svc.actions[key];
-    if (!act) continue; // safety
+    if (!act) continue;
     const body = def.hasBody ? `<div class="act-body ${act.enabled?'open':''}" id="ab-${sid}-${key}">${actBodyHtml(key,act,sid,type)}</div>` : '';
     actRows += `<div class="act-row">
       <div class="act-header" onclick="toggleAct(${sid},'${type}','${key}')">
@@ -793,17 +802,21 @@ function renderSvcCard(svc, type, idx) {
   }
 
   return `<div class="svc-card" id="svc-${sid}">
-    <div class="svc-card-head">
-      <span class="svc-card-label">${label}</span>
+    <div class="svc-card-head" onclick="toggleSvcCard(${sid})">
+      <div style="flex:1;min-width:0">
+        <div class="svc-card-label">${label}</div>
+        <div style="font-size:10.5px;color:#7f8c8d;margin-top:1px">${subtitle}</div>
+      </div>
       <span style="font-size:11px;color:#5d6d7e;margin-right:4px">Items:</span>
-      <div class="counter-inline">
+      <div class="counter-inline" onclick="event.stopPropagation()">
         <button class="cnt-btn" onclick="adjItems(${sid},'${type}',-1)">&#8722;</button>
         <div class="cnt-val" id="iv-${sid}">${svc.items}</div>
         <button class="cnt-btn" onclick="adjItems(${sid},'${type}',1)">&#43;</button>
       </div>
-      <button class="btn-remove" onclick="removeSvc(${sid},'${type}')">&#10005;</button>
+      <button class="btn-remove" onclick="event.stopPropagation();removeSvc(${sid},'${type}')">&#10005;</button>
+      <span class="svc-card-chevron" id="chev-${sid}" style="transform:${collapsed?'':'rotate(180deg)'}">&#9660;</span>
     </div>
-    <div class="svc-card-body">
+    <div class="svc-card-body" id="scb-${sid}" style="display:${collapsed?'none':'block'}">
       ${unknownToggle}
       <div class="actions-title">Actions (IsMandatory = true)</div>
       ${actRows}
@@ -811,10 +824,19 @@ function renderSvcCard(svc, type, idx) {
   </div>`;
 }
 
+function toggleSvcCard(sid) {
+  const body = document.getElementById(`scb-${sid}`);
+  const chev = document.getElementById(`chev-${sid}`);
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : '';
+}
+
 function renderModalBody(stop) {
-  const delHtml = stop.deliveries.map((d,i) => renderSvcCard(d,'del',i)).join('') ||
+  const delHtml = stop.deliveries.map((d,i) => renderSvcCard(d,'del',i, true)).join('') ||
     '<div style="font-size:12px;color:#95a5a6;padding:6px 0">No deliveries yet.</div>';
-  const colHtml = stop.collections.map((c,i) => renderSvcCard(c,'col',i)).join('') ||
+  const colHtml = stop.collections.map((c,i) => renderSvcCard(c,'col',i, true)).join('') ||
     '<div style="font-size:12px;color:#95a5a6;padding:6px 0">No collections yet.</div>';
   return `
     <div class="form-row" style="margin-bottom:4px">
@@ -884,7 +906,7 @@ function addSvc(type) {
   const arr = type==='del' ? stop.deliveries : stop.collections;
   arr.push(svc);
   document.getElementById(`${type}-list`).innerHTML =
-    arr.map((d,i) => renderSvcCard(d,type,i)).join('');
+    arr.map((d,i,a) => renderSvcCard(d,type,i, i < a.length-1)).join('');
 }
 function removeSvc(svcId, type) {
   const stop = S.stops.find(s=>s.id===S.editStopId);
@@ -936,6 +958,13 @@ function goNext() {
 }
 function goBack() { if (S.step>1) setStep(S.step-1); }
 function showWarn(id,msg) { const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+
+function navigateToStep(n) {
+  if (n === 1) { setStep(1); return; }
+  if (n === 2 && !S.site) return;
+  if (n === 3 && (!S.site || !S.stops.length)) return;
+  setStep(n);
+}
 
 function setStep(n) {
   S.step = n;
@@ -1062,10 +1091,10 @@ ${runXml}${svcBlock}
 
   const totalItems = allDel.reduce((a,{svc})=>a+svc.items,0) + allCol.reduce((a,{svc})=>a+svc.items,0);
   document.getElementById('summary-grid').innerHTML = `
-    <div class="sum-card"><div class="sum-val">${S.stops.length}</div><div class="sum-label">Stops</div></div>
-    <div class="sum-card"><div class="sum-val">${allDel.length}</div><div class="sum-label">Deliveries</div></div>
-    <div class="sum-card"><div class="sum-val">${allCol.length}</div><div class="sum-label">Collections</div></div>
-    <div class="sum-card"><div class="sum-val">${totalItems}</div><div class="sum-label">Total Items</div></div>`;
+    <div class="sum-card"><div class="sum-card-icon">📍</div><div><div class="sum-val">${S.stops.length}</div><div class="sum-label">Stops</div></div></div>
+    <div class="sum-card"><div class="sum-card-icon">📦</div><div><div class="sum-val">${allDel.length}</div><div class="sum-label">Deliveries</div></div></div>
+    <div class="sum-card orange"><div class="sum-card-icon">📥</div><div><div class="sum-val">${allCol.length}</div><div class="sum-label">Collections</div></div></div>
+    <div class="sum-card orange"><div class="sum-card-icon">🔢</div><div><div class="sum-val">${totalItems}</div><div class="sum-label">Total Items</div></div></div>`;
 }
 
 /* Helpers for XML generation */
