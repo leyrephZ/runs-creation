@@ -389,12 +389,22 @@
       <div class="panel" id="p3">
         <div id="summary-grid" class="summary-grid"></div>
         <button class="btn btn-outline btn-full" style="margin-bottom:12px" onclick="openBarcodeModal()">&#128203; View Run Summary &amp; Barcodes</button>
-        <div class="sec-title">&#128196; XML Preview</div>
-        <div id="val-result" class="val-result"></div>
-        <div class="xml-area" id="xml-preview" style="margin-top:10px"></div>
-        <div style="margin-top:12px;display:flex;gap:7px">
-          <button class="btn btn-outline" style="flex:1" onclick="copyXML()">&#128203; Copy</button>
+        <div style="margin-bottom:10px;display:flex;gap:7px">
+          <button class="btn btn-outline" style="flex:1" onclick="copyXML()">&#128203; Copy XML</button>
           <button class="btn btn-orange" onclick="downloadXML()">&#11015; Download XML</button>
+        </div>
+
+        <!-- Collapsible XML preview -->
+        <div style="border:1.5px solid #b8cfec;border-radius:7px;overflow:hidden;margin-bottom:4px">
+          <button onclick="toggleXmlPreview()" id="xml-toggle-btn"
+            style="width:100%;padding:8px 12px;background:#f0f6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#19427C;">
+            <span>&#128196; XML Preview</span>
+            <span id="xml-toggle-icon" style="font-size:10px;transition:transform .2s">&#9660;</span>
+          </button>
+          <div id="xml-collapsible" style="display:none">
+            <div id="val-result" class="val-result" style="margin:8px 10px 0"></div>
+            <div class="xml-area" id="xml-preview" style="margin:6px 0 0;border-radius:0;max-height:340px"></div>
+          </div>
         </div>
 
         <!-- API SEND -->
@@ -1619,6 +1629,14 @@ function setHint(html) {
   if (!html){el.classList.add('hidden');return;}
   el.classList.remove('hidden'); el.innerHTML=html;
 }
+function toggleXmlPreview() {
+  const box  = document.getElementById('xml-collapsible');
+  const icon = document.getElementById('xml-toggle-icon');
+  const open = box.style.display === 'none';
+  box.style.display  = open ? 'block' : 'none';
+  icon.style.transform = open ? 'rotate(180deg)' : '';
+}
+
 function copyXML() {
   navigator.clipboard.writeText(_xmlString).then(()=>{
     const t=event.currentTarget, o=t.innerHTML;
