@@ -337,15 +337,16 @@
               <input type="text" id="siteId" placeholder="e.g. WAREHOUSE_MAD_01" oninput="onSiteIdChange()" autocomplete="off"/>
               <div class="hint">Unique site identifier in Chronos</div>
             </div>
-            <div class="form-group">
-              <label>Visual Address <span style="font-weight:400;color:#95a5a6">(display only)</span></label>
-              <input type="text" id="siteAddr" placeholder="Auto-filled when you click the map" autocomplete="off"/>
-              <div class="hint">Not exported to XML</div>
-            </div>
-            <div id="site-coords-wrap" style="display:none">
-              <div class="form-group">
-                <label>Coordinates</label>
-                <input type="text" id="siteCoords" readonly style="background:#f7faff;color:#5d6d7e;"/>
+            <div class="form-row" style="gap:8px">
+              <div class="form-group" style="flex:2;margin-bottom:0">
+                <label>Visual Address <span style="font-weight:400;color:#95a5a6">(display only)</span></label>
+                <input type="text" id="siteAddr" placeholder="Auto-filled when you click the map" autocomplete="off"/>
+              </div>
+              <div id="site-coords-wrap" style="display:none;flex:1">
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Coordinates</label>
+                  <input type="text" id="siteCoords" readonly style="background:#f7faff;color:#5d6d7e;"/>
+                </div>
               </div>
             </div>
           </div>
@@ -359,18 +360,17 @@
             <span class="step-sec-caret" id="caret-run-settings" style="transform:rotate(180deg)">&#9660;</span>
           </button>
           <div class="step-sec-body" id="body-run-settings">
-            <div class="form-group">
-              <label>Run Name <span style="font-weight:400;color:#95a5a6">(modifiable)</span></label>
-              <input type="text" id="runName" placeholder="Auto-filled on load" autocomplete="off"/>
-              <div class="hint">Exported as &lt;Name&gt;</div>
-            </div>
-            <!-- Run Date + Unload Process on same row -->
-            <div class="form-row" style="align-items:center;gap:8px;margin-bottom:13px">
+            <!-- Run Name + Run Date + Unload on same row -->
+            <div class="form-row" style="align-items:flex-end;gap:8px;margin-bottom:13px">
+              <div class="form-group" style="flex:1;margin-bottom:0">
+                <label>Run Name <span style="font-weight:400;color:#95a5a6;font-size:10px">modifiable</span></label>
+                <input type="text" id="runName" placeholder="Auto-filled on load" autocomplete="off"/>
+              </div>
               <div class="form-group" style="flex:1;margin-bottom:0">
                 <label>Run Date &amp; Time</label>
                 <input type="datetime-local" id="runDate" style="width:100%"/>
               </div>
-              <div style="flex-shrink:0;padding-top:18px">
+              <div style="flex-shrink:0;padding-bottom:1px">
                 <div class="allow-unknown-row" style="margin-bottom:0;padding:6px 10px">
                   <input type="checkbox" id="runUnloadProcess" checked style="accent-color:#19427C;width:14px;height:14px"/>
                   <label for="runUnloadProcess" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer;white-space:nowrap">Unload</label>
@@ -694,7 +694,7 @@ function placeSite(lat, lng) {
   marker.bindTooltip('Warehouse (Site)', { permanent:false, direction:'top' });
   S.site = { lat, lng, externalId:document.getElementById('siteId').value.trim(), address:'', addrParsed:emptyAddr(), marker };
   document.getElementById('siteCoords').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-  document.getElementById('site-coords-wrap').style.display = 'block';
+  document.getElementById('site-coords-wrap').style.display = 'flex';
   document.getElementById('p1-warn').style.display = 'none';
   setHint('Warehouse placed. Complete the fields and click <strong>Next</strong>.');
   reverseGeocode(lat, lng, ({ display, parsed }) => {
