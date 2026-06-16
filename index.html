@@ -121,6 +121,7 @@
     .badge-del  { background:#fdebd0; color:#8a4000; }
     .badge-col  { background:#d6eaf8; color:#19427C; }
     .badge-none { background:#fdecea; color:#c0392b; }
+    .badge-it   { background:#d5f5e3; color:#1a7a40; }
     .stop-btns { display:flex; gap:3px; flex-shrink:0; }
     .icon-btn { width:25px; height:25px; border:none; border-radius:4px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:background .12s; }
     .icon-btn-cfg { background:#e8f0fb; color:#19427C; }
@@ -591,8 +592,8 @@ const emptyColAct = () => ({
   link:      { enabled:false, url:'' },
 });
 
-const newDel = () => ({ svcId:S.nextSvcId++, items:1, pta:'', actions:emptyDelAct() });
-const newCol = () => ({ svcId:S.nextSvcId++, items:1, allowUnknown:false, pta:'', actions:emptyColAct() });
+const newDel = () => ({ svcId:S.nextSvcId++, items:1, pta:'', internalTransferSrcId:null, actions:emptyDelAct() });
+const newCol = () => ({ svcId:S.nextSvcId++, items:1, isInternalTransfer:false, allowUnknown:false, pta:'', actions:emptyColAct() });
 
 // ══════════════════════════════════════════════════════════════
 // MAP — CartoDB tiles (no referer restriction)
@@ -758,16 +759,21 @@ function renderList() {
   }
   S.stops.forEach((s,i) => {
     const nD = s.deliveries.length, nC = s.collections.length;
-    const bD = nD ? `<span class="badge badge-del">Del ×${nD}</span>` : '';
-    const bC = nC ? `<span class="badge badge-col">Col ×${nC}</span>` : '';
-    const bN = !nD && !nC ? `<span class="badge badge-none">Not configured</span>` : '';
+    const nDit = s.deliveries.filter(d => d.internalTransferSrcId).length;
+    const nCit = s.collections.filter(c => c.isInternalTransfer).length;
+    const nDreg = nD - nDit, nCreg = nC - nCit;
+    const bD   = nDreg ? `<span class="badge badge-del">Del &#215;${nDreg}</span>` : '';
+    const bC   = nCreg ? `<span class="badge badge-col">Col &#215;${nCreg}</span>` : '';
+    const bDit = nDit  ? `<span class="badge badge-it">&#8596; Del &#215;${nDit}</span>` : '';
+    const bCit = nCit  ? `<span class="badge badge-it">&#8596; Col &#215;${nCit}</span>` : '';
+    const bN   = !nD && !nC ? `<span class="badge badge-none">Not configured</span>` : '';
     const li = document.createElement('li');
     li.className = 'stop-item'; li.dataset.id = s.id;
     li.innerHTML = `<span class="drag-handle">&#8942;&#8942;</span>
       <div class="stop-num">${i+1}</div>
       <div class="stop-info">
         <div class="stop-addr" title="${s.address}">${s.address}</div>
-        <div class="stop-badges">${bD}${bC}${bN}</div>
+        <div class="stop-badges">${bD}${bDit}${bC}${bCit}${bN}</div>
       </div>
       <div class="stop-btns">
         <button class="icon-btn icon-btn-cfg" title="Configure" onclick="openModal(${s.id})">&#9881;</button>
@@ -814,13 +820,46 @@ function renderSvcCard(svc, type, idx, collapsed=false) {
   const sid   = svc.svcId;
   const label = type==='del' ? `Delivery ${idx+1}` : `Collection ${idx+1}`;
   const enabledActs = Object.values(svc.actions).filter(a=>a.enabled).length;
-  const subtitle = `${svc.items} item${svc.items!==1?'s':''}${enabledActs?' · '+enabledActs+' action'+(enabledActs!==1?'s':''):''}${type==='col'&&svc.allowUnknown?' · unplanned':''}`;
 
+  // subtitle — show IT status
+  const itemsLabel = type==='del' && svc.internalTransferSrcId
+    ? '&#8596; from IT source'
+    : `${svc.items} item${svc.items!==1?'s':''}`;
+  const itColNote = type==='col' && svc.isInternalTransfer ? ' · &#8596;' : '';
+  const subtitle = `${itemsLabel}${enabledActs?' · '+enabledActs+' action'+(enabledActs!==1?'s':''):''}${type==='col'&&svc.allowUnknown?' · unplanned':''}${itColNote}`;
+
+  // Collection body extras
   const unknownToggle = type==='col' ? `
     <div class="allow-unknown-row">
       <input type="checkbox" id="acu-${sid}" ${svc.allowUnknown?'checked':''} onchange="updAllowUnknown(${sid},this.checked)"/>
       <label for="acu-${sid}">Allow Collecting Unknown Items</label>
     </div>` : '';
+  const itColCheck = type==='col' ? `
+    <div class="allow-unknown-row" style="border-color:#a9dfbf;background:#f0faf4">
+      <input type="checkbox" id="itc-${sid}" ${svc.isInternalTransfer?'checked':''} onchange="updIsInternalTransfer(${sid},this.checked)"/>
+      <label for="itc-${sid}" style="color:#1a7a40;font-weight:700">&#8596; Internal Transfer</label>
+    </div>` : '';
+
+  // Delivery body: IT source dropdown
+  let itDropdown = '';
+  if (type === 'del') {
+    const itColls = getITCollections();
+    const src = svc.internalTransferSrcId ? itColls.find(x => x.col.svcId === svc.internalTransferSrcId) : null;
+    const noteHtml = src
+      ? `<div style="font-size:11px;color:#1a7a40;margin-top:4px">&#8596; ${src.col.items} item${src.col.items!==1?'s':''} from Stop ${src.stopSeq} &#8212; ${escHtml(src.stop.customerName)}</div>`
+      : '';
+    itDropdown = `
+    <div class="form-group" style="margin-bottom:8px">
+      <label>Source (Internal Transfer)</label>
+      <select id="its-${sid}" onchange="updITSource(${sid},this.value)" style="border-color:${svc.internalTransferSrcId?'#1a7a40':''}">
+        <option value="">&#8212; None (standard delivery) &#8212;</option>
+        ${itColls.map(({stop:st, col, stopSeq, svcSeq}) =>
+          `<option value="${col.svcId}" ${svc.internalTransferSrcId===col.svcId?'selected':''}>Stop ${stopSeq} &#8212; ${escHtml(st.customerName)} (Col ${svcSeq}, ${col.items} item${col.items!==1?'s':''})</option>`
+        ).join('')}
+      </select>
+      <div id="it-note-${sid}">${noteHtml}</div>
+    </div>`;
+  }
 
   let actRows = '';
   for (const [key, def] of Object.entries(ACT_DEF)) {
@@ -834,23 +873,30 @@ function renderSvcCard(svc, type, idx, collapsed=false) {
       </div>${body}</div>`;
   }
 
+  // Items counter: hidden when this delivery is linked to an IT source
+  const cntStyle = type==='del' && svc.internalTransferSrcId ? 'display:none' : 'display:flex;align-items:center;gap:2px';
+
   return `<div class="svc-card" id="svc-${sid}">
     <div class="svc-card-head" onclick="toggleSvcCard(${sid})">
       <div style="flex:1;min-width:0">
         <div class="svc-card-label">${label}</div>
         <div style="font-size:10.5px;color:#7f8c8d;margin-top:1px">${subtitle}</div>
       </div>
-      <span style="font-size:11px;color:#5d6d7e;margin-right:4px">Items:</span>
-      <div class="counter-inline" onclick="event.stopPropagation()">
-        <button class="cnt-btn" onclick="adjItems(${sid},'${type}',-1)">&#8722;</button>
-        <div class="cnt-val" id="iv-${sid}">${svc.items}</div>
-        <button class="cnt-btn" onclick="adjItems(${sid},'${type}',1)">&#43;</button>
+      <div id="iv-cnt-${sid}" style="${cntStyle}" onclick="event.stopPropagation()">
+        <span style="font-size:11px;color:#5d6d7e;margin-right:4px">Items:</span>
+        <div class="counter-inline">
+          <button class="cnt-btn" onclick="adjItems(${sid},'${type}',-1)">&#8722;</button>
+          <div class="cnt-val" id="iv-${sid}">${svc.items}</div>
+          <button class="cnt-btn" onclick="adjItems(${sid},'${type}',1)">&#43;</button>
+        </div>
       </div>
       <button class="btn-remove" onclick="event.stopPropagation();removeSvc(${sid},'${type}')">&#10005;</button>
       <span class="svc-card-chevron" id="chev-${sid}" style="transform:${collapsed?'':'rotate(180deg)'}">&#9660;</span>
     </div>
     <div class="svc-card-body" id="scb-${sid}" style="display:${collapsed?'none':'block'}">
+      ${itDropdown}
       ${unknownToggle}
+      ${itColCheck}
       <div class="actions-title">Actions (IsMandatory = true)</div>
       ${actRows}
     </div>
@@ -1009,6 +1055,55 @@ function getStepSectionBadge(id) {
   return '';
 }
 
+// ── Internal Transfer helpers ─────────────────────────────────
+function getITCollections() {
+  const result = [];
+  S.stops.forEach((stop, si) => {
+    stop.collections.forEach((col, ci) => {
+      if (col.isInternalTransfer) result.push({ stop, col, stopSeq: si+1, svcSeq: ci+1 });
+    });
+  });
+  return result;
+}
+function updIsInternalTransfer(svcId, val) {
+  const svc = getSvc(svcId, 'col');
+  if (svc) svc.isInternalTransfer = val;
+  refreshITDropdowns();
+}
+function refreshITDropdowns() {
+  const stop = S.stops.find(s => s.id === S.editStopId);
+  if (!stop) return;
+  const itColls = getITCollections();
+  stop.deliveries.forEach(del => {
+    const sel = document.getElementById(`its-${del.svcId}`);
+    if (!sel) return;
+    sel.innerHTML = `<option value="">&#8212; None (standard delivery) &#8212;</option>` +
+      itColls.map(({stop:st, col, stopSeq, svcSeq}) =>
+        `<option value="${col.svcId}" ${del.internalTransferSrcId===col.svcId?'selected':''}>Stop ${stopSeq} &#8212; ${escHtml(st.customerName)} (Col ${svcSeq}, ${col.items} item${col.items!==1?'s':''})</option>`
+      ).join('');
+  });
+}
+function updITSource(svcId, val) {
+  const svc = getSvc(svcId, 'del');
+  if (!svc) return;
+  svc.internalTransferSrcId = val ? parseInt(val) : null;
+  const cntEl = document.getElementById(`iv-cnt-${svcId}`);
+  if (cntEl) cntEl.style.display = val ? 'none' : 'flex';
+  const selEl = document.getElementById(`its-${svcId}`);
+  if (selEl) selEl.style.borderColor = val ? '#1a7a40' : '';
+  const noteEl = document.getElementById(`it-note-${svcId}`);
+  if (noteEl) {
+    if (val) {
+      const src = getITCollections().find(x => x.col.svcId === parseInt(val));
+      noteEl.innerHTML = src
+        ? `<div style="font-size:11px;color:#1a7a40;margin-top:4px">&#8596; ${src.col.items} item${src.col.items!==1?'s':''} from Stop ${src.stopSeq} &#8212; ${escHtml(src.stop.customerName)}</div>`
+        : '';
+    } else {
+      noteEl.innerHTML = '';
+    }
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════
@@ -1127,6 +1222,14 @@ function buildXML() {
     stop.collections.forEach((svc,ci) => allCol.push({ stop, svc, stopSeq:seq, svcSeq:ci+1 }));
   });
 
+  // Build lookup: collectionSvcId → { extId, items } (for IT delivery item generation)
+  const colInfoMap = {};
+  S.stops.forEach((stop, si) => {
+    stop.collections.forEach((col, ci) => {
+      colInfoMap[col.svcId] = { extId: `col_${sid}_${dt}_${si+1}_${ci+1}`, items: col.items };
+    });
+  });
+
   // ⚠ XSD order: CollectionListImport BEFORE DeliveryListImport
   let colBlock = '', delBlock = '';
   if (allCol.length) {
@@ -1134,7 +1237,7 @@ function buildXML() {
     colBlock = `\n    <CollectionListImport>${body}\n    </CollectionListImport>`;
   }
   if (allDel.length) {
-    const body = allDel.map(({ stop,svc,stopSeq,svcSeq }) => genDelivery(stop,svc,stopSeq,svcSeq,runExtId,sid,dt)).join('');
+    const body = allDel.map(({ stop,svc,stopSeq,svcSeq }) => genDelivery(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,colInfoMap)).join('');
     delBlock = `\n    <DeliveryListImport>${body}\n    </DeliveryListImport>`;
   }
 
@@ -1286,11 +1389,23 @@ function itemsBlock(svc, extId) {
     xml+=`\n          <ItemImport>\n            <ExternalId>item_${extId}_${i}</ExternalId>\n            <Status>New</Status>\n          </ItemImport>`;
   return `\n        <ItemListImport>${xml}\n        </ItemListImport>`;
 }
+function itemsBlock_IT(colExtId, colItems) {
+  let xml='';
+  for (let i=1;i<=colItems;i++)
+    xml+=`\n          <ItemImport>
+            <ExternalId>item_${colExtId}_${i}</ExternalId>
+            <Status>New</Status>
+            <InternalTransferExternalId>${escX(colExtId)}</InternalTransferExternalId>
+          </ItemImport>`;
+  return `\n        <ItemListImport>${xml}\n        </ItemListImport>`;
+}
 
 // DeliveryImport — XSD order
-function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
+function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}) {
   const extId  = `del_${sid}_${dt}_${stopSeq}_${svcSeq}`;
   const stopId = escX(stop.customerName);
+  const itSrc  = svc.internalTransferSrcId ? colInfoMap[svc.internalTransferSrcId] : null;
+  const items  = itSrc ? itemsBlock_IT(itSrc.extId, itSrc.items) : itemsBlock(svc, extId);
   return `
       <DeliveryImport>
         <SiteId>${escX(sid)}</SiteId>
@@ -1306,7 +1421,7 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
           <Longitude>${stop.lng.toFixed(6)}</Longitude>
         </GPSPoints>
         <Status>New</Status>
-        <DeliveryType>Delivery</DeliveryType>${itemsBlock(svc,extId)}${genActions(svc,'del')}
+        <DeliveryType>Delivery</DeliveryType>${items}${genActions(svc,'del')}
       </DeliveryImport>`;
 }
 
@@ -1329,7 +1444,7 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
           <Longitude>${stop.lng.toFixed(6)}</Longitude>
         </GPSPoints>
         <Status>New</Status>
-        <CollectionType>Collection</CollectionType>
+        <CollectionType>${svc.isInternalTransfer ? 'InternalTransfer' : 'Collection'}</CollectionType>
         <AllowCollectingUnknownItems>${svc.allowUnknown ? 'true' : 'false'}</AllowCollectingUnknownItems>${itemsBlock(svc,extId)}${genActions(svc,'col')}
       </CollectionImport>`;
 }
@@ -1457,12 +1572,27 @@ function openBarcodeModal() {
     stop.deliveries.forEach((svc, di) => {
       const svcSeq = di + 1;
       const extId  = `del_${sid}_${dt}_${seq}_${svcSeq}`;
-      html += `<div class="bc-svc-label del">📦 Delivery ${svcSeq}
-        <span style="font-weight:400;font-size:10px;color:#7f8c8d"> (${svc.items} item${svc.items>1?'s':''})</span></div>
+      // For IT deliveries, items come from the linked collection
+      let itemCount = svc.items;
+      let itemIdFn  = (i) => `item_${extId}_${i}`;
+      if (svc.internalTransferSrcId) {
+        S.stops.forEach((st2, si2) => {
+          st2.collections.forEach((col, ci2) => {
+            if (col.svcId === svc.internalTransferSrcId) {
+              const srcExtId = `col_${sid}_${dt}_${si2+1}_${ci2+1}`;
+              itemCount = col.items;
+              itemIdFn  = (i) => `item_${srcExtId}_${i}`;
+            }
+          });
+        });
+      }
+      const itBadge = svc.internalTransferSrcId
+        ? ' <span style="background:#1a7a40;color:white;font-size:9px;border-radius:3px;padding:1px 5px;font-weight:700">&#8596; IT</span>' : '';
+      html += `<div class="bc-svc-label del">📦 Delivery ${svcSeq}${itBadge}
+        <span style="font-weight:400;font-size:10px;color:#7f8c8d"> (${itemCount} item${itemCount>1?'s':''})</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
-      // Planned items
-      for (let i = 1; i <= svc.items; i++) {
-        html += _bcCard(barcodeItems, `item_${extId}_${i}`);
+      for (let i = 1; i <= itemCount; i++) {
+        html += _bcCard(barcodeItems, itemIdFn(i));
       }
       // Proof of Presence barcode
       if (svc.actions?.pop?.enabled && svc.actions.pop.barcode) {
@@ -1658,30 +1788,51 @@ function createQuickRun() {
 
   // 7. Build stops
   S.step = 2; // markers need step 2 icon context
+  let lastITColSvcId = null;
   for (let i = 0; i < numStops; i++) {
     const { dlat, dlng } = stopPos(i);
-    const def = TEMPLATES[i % TEMPLATES.length](siteLat + dlat, siteLng + dlng, i);
+    const lat = siteLat + dlat, lng = siteLng + dlng;
     const id  = S.nextId++;
     const n   = S.stops.length + 1;
-    const marker = L.marker([def.lat, def.lng], { icon: stopIcon(n) }).addTo(map);
+    const marker = L.marker([lat, lng], { icon: stopIcon(n) }).addTo(map);
     marker.on('click', () => openModal(id));
+
+    let custName, deliveries, collections;
+    if (numStops % 5 === 0 && i % 5 === 3) {
+      // InternalTransfer collection stop (4th of each group of 5)
+      custName = getName(i);
+      const itColSvcId = S.nextSvcId++;
+      lastITColSvcId = itColSvcId;
+      deliveries = [];
+      collections = [{ svcId: itColSvcId, items: 2, isInternalTransfer: true, allowUnknown: false, pta: '', actions: emptyColAct() }];
+    } else if (numStops % 5 === 0 && i % 5 === 4 && lastITColSvcId !== null) {
+      // Delivery linked to IT collection (5th of each group of 5)
+      custName = getName(i);
+      deliveries = [{ svcId: S.nextSvcId++, items: 2, pta: '', internalTransferSrcId: lastITColSvcId, actions: emptyDelAct() }];
+      collections = [];
+      lastITColSvcId = null;
+    } else {
+      // Normal template
+      const def = TEMPLATES[i % TEMPLATES.length](lat, lng, i);
+      custName = def.name;
+      deliveries = def.deliveries.map(d => {
+        const acts = emptyDelAct(); if (d.act) d.act(acts);
+        return { svcId: S.nextSvcId++, items: d.items, pta: '', internalTransferSrcId: null, actions: acts };
+      });
+      collections = def.collections.map(c => {
+        const acts = emptyColAct(); if (c.act) c.act(acts);
+        return { svcId: S.nextSvcId++, items: c.items, isInternalTransfer: false, allowUnknown: !!c.allowUnknown, pta: '', actions: acts };
+      });
+    }
+
     const stop = {
-      id, lat: def.lat, lng: def.lng,
-      address: def.name, addrParsed: emptyAddr(),
-      customerName: def.name, marker,
-      deliveries: def.deliveries.map(d => {
-        const acts = emptyDelAct();
-        if (d.act) d.act(acts);
-        return { svcId: S.nextSvcId++, items: d.items, actions: acts };
-      }),
-      collections: def.collections.map(c => {
-        const acts = emptyColAct();
-        if (c.act) c.act(acts);
-        return { svcId: S.nextSvcId++, items: c.items, allowUnknown: !!c.allowUnknown, actions: acts };
-      }),
+      id, lat, lng,
+      address: custName, addrParsed: emptyAddr(),
+      customerName: custName, marker,
+      deliveries, collections,
     };
     S.stops.push(stop);
-    reverseGeocode(def.lat, def.lng, ({ display, parsed }) => {
+    reverseGeocode(lat, lng, ({ display, parsed }) => {
       stop.address = display; stop.addrParsed = parsed;
     });
   }
