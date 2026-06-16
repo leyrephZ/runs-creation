@@ -371,10 +371,14 @@
                 <label>Run Date &amp; Time</label>
                 <input type="datetime-local" id="runDate" style="width:100%"/>
               </div>
-              <div style="flex-shrink:0;padding-bottom:1px">
+              <div style="flex-shrink:0;padding-bottom:1px;display:flex;flex-direction:column;gap:4px">
                 <div class="allow-unknown-row" style="margin-bottom:0;padding:6px 10px">
                   <input type="checkbox" id="runUnloadProcess" checked style="accent-color:#19427C;width:14px;height:14px"/>
                   <label for="runUnloadProcess" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer;white-space:nowrap">Unload</label>
+                </div>
+                <div class="allow-unknown-row" style="margin-bottom:0;padding:6px 10px">
+                  <input type="checkbox" id="runContainers" style="accent-color:#19427C;width:14px;height:14px"/>
+                  <label for="runContainers" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer;white-space:nowrap">Containers</label>
                 </div>
               </div>
             </div>
@@ -1199,7 +1203,8 @@ function buildXML() {
   const runDateXml = runDateVal ? runDateVal + ':00' : '';
 
   // Run-level phase actions XML
-  const runPhasesXml = RUN_PHASES.map(genRunPhaseXml).join('');
+  const runPhasesXml  = RUN_PHASES.map(genRunPhaseXml).join('');
+  const useContainers = document.getElementById('runContainers').checked;
 
   /* ── RunImport (XSD order) ── */
   const runXml = `  <RunListImport>
@@ -1233,11 +1238,11 @@ function buildXML() {
   // ⚠ XSD order: CollectionListImport BEFORE DeliveryListImport
   let colBlock = '', delBlock = '';
   if (allCol.length) {
-    const body = allCol.map(({ stop,svc,stopSeq,svcSeq }) => genCollection(stop,svc,stopSeq,svcSeq,runExtId,sid,dt)).join('');
+    const body = allCol.map(({ stop,svc,stopSeq,svcSeq }) => genCollection(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,useContainers)).join('');
     colBlock = `\n    <CollectionListImport>${body}\n    </CollectionListImport>`;
   }
   if (allDel.length) {
-    const body = allDel.map(({ stop,svc,stopSeq,svcSeq }) => genDelivery(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,colInfoMap)).join('');
+    const body = allDel.map(({ stop,svc,stopSeq,svcSeq }) => genDelivery(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,colInfoMap,useContainers)).join('');
     delBlock = `\n    <DeliveryListImport>${body}\n    </DeliveryListImport>`;
   }
 
@@ -1383,29 +1388,67 @@ function genActions(svc, type) {
   return xml ? `\n        <Actions>${xml}\n        </Actions>` : '';
 }
 
-function itemsBlock(svc, extId) {
+function itemsBlock(svc, extId, useContainers=false) {
   let xml='';
-  for (let i=1;i<=svc.items;i++)
-    xml+=`\n          <ItemImport>\n            <ExternalId>item_${extId}_${i}</ExternalId>\n            <Status>New</Status>\n          </ItemImport>`;
+  const withContainer = useContainers && svc.items > 1;
+  const ctnId = `item_${extId}_1`;
+  for (let i=1;i<=svc.items;i++) {
+    const itemExtId = `item_${extId}_${i}`;
+    if (withContainer && i===1)
+      xml+=`\n          <ItemImport>
+            <ExternalId>${itemExtId}</ExternalId>
+            <Status>New</Status>
+            <IsContainer>true</IsContainer>
+          </ItemImport>`;
+    else if (withContainer)
+      xml+=`\n          <ItemImport>
+            <ExternalId>${itemExtId}</ExternalId>
+            <Status>New</Status>
+            <Container>${ctnId}</Container>
+            <IsContainer>false</IsContainer>
+          </ItemImport>`;
+    else
+      xml+=`\n          <ItemImport>\n            <ExternalId>${itemExtId}</ExternalId>\n            <Status>New</Status>\n          </ItemImport>`;
+  }
   return `\n        <ItemListImport>${xml}\n        </ItemListImport>`;
 }
-function itemsBlock_IT(colExtId, colItems) {
+function itemsBlock_IT(colExtId, colItems, useContainers=false) {
   let xml='';
-  for (let i=1;i<=colItems;i++)
-    xml+=`\n          <ItemImport>
-            <ExternalId>item_${colExtId}_${i}</ExternalId>
+  const withContainer = useContainers && colItems > 1;
+  const ctnId = `item_${colExtId}_1`;
+  for (let i=1;i<=colItems;i++) {
+    const itemExtId = `item_${colExtId}_${i}`;
+    if (withContainer && i===1)
+      xml+=`\n          <ItemImport>
+            <ExternalId>${itemExtId}</ExternalId>
+            <Status>New</Status>
+            <IsContainer>true</IsContainer>
+            <InternalTransferExternalId>${escX(colExtId)}</InternalTransferExternalId>
+          </ItemImport>`;
+    else if (withContainer)
+      xml+=`\n          <ItemImport>
+            <ExternalId>${itemExtId}</ExternalId>
+            <Status>New</Status>
+            <Container>${ctnId}</Container>
+            <IsContainer>false</IsContainer>
+            <InternalTransferExternalId>${escX(colExtId)}</InternalTransferExternalId>
+          </ItemImport>`;
+    else
+      xml+=`\n          <ItemImport>
+            <ExternalId>${itemExtId}</ExternalId>
             <Status>New</Status>
             <InternalTransferExternalId>${escX(colExtId)}</InternalTransferExternalId>
           </ItemImport>`;
+  }
   return `\n        <ItemListImport>${xml}\n        </ItemListImport>`;
 }
 
 // DeliveryImport — XSD order
-function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}) {
+function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}, useContainers=false) {
   const extId  = `del_${sid}_${dt}_${stopSeq}_${svcSeq}`;
   const stopId = escX(stop.customerName);
   const itSrc  = svc.internalTransferSrcId ? colInfoMap[svc.internalTransferSrcId] : null;
-  const items  = itSrc ? itemsBlock_IT(itSrc.extId, itSrc.items) : itemsBlock(svc, extId);
+  const items  = itSrc ? itemsBlock_IT(itSrc.extId, itSrc.items, useContainers) : itemsBlock(svc, extId, useContainers);
   return `
       <DeliveryImport>
         <SiteId>${escX(sid)}</SiteId>
@@ -1426,7 +1469,7 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}) 
 }
 
 // CollectionImport — XSD order (AllowCollectingUnknownItems after CollectionType)
-function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
+function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers=false) {
   const extId  = `col_${sid}_${dt}_${stopSeq}_${svcSeq}`;
   const stopId = escX(stop.customerName);
   return `
@@ -1445,7 +1488,7 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt) {
         </GPSPoints>
         <Status>New</Status>
         <CollectionType>${svc.isInternalTransfer ? 'InternalTransfer' : 'Collection'}</CollectionType>
-        <AllowCollectingUnknownItems>${svc.allowUnknown ? 'true' : 'false'}</AllowCollectingUnknownItems>${itemsBlock(svc,extId)}${genActions(svc,'col')}
+        <AllowCollectingUnknownItems>${svc.allowUnknown ? 'true' : 'false'}</AllowCollectingUnknownItems>${itemsBlock(svc,extId,useContainers)}${genActions(svc,'col')}
       </CollectionImport>`;
 }
 
@@ -1675,6 +1718,7 @@ function resetApp() {
   ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId','api-token']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('runUnloadProcess').checked = true;
+  document.getElementById('runContainers').checked = false;
   document.getElementById('site-coords-wrap').style.display = 'none';
   document.getElementById('p1-warn').style.display = 'none';
   document.getElementById('api-response').style.display = 'none';
@@ -1709,6 +1753,7 @@ function createQuickRun() {
   ['siteId','siteAddr','siteCoords','runDriver','runVehicle','runTagId']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('runUnloadProcess').checked = true;
+  document.getElementById('runContainers').checked = true;
   document.getElementById('site-coords-wrap').style.display = 'none';
   document.getElementById('p1-warn').style.display = 'none';
   document.getElementById('api-response').style.display = 'none';
