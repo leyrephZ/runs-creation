@@ -371,14 +371,10 @@
                 <label>Run Date &amp; Time</label>
                 <input type="datetime-local" id="runDate" style="width:100%"/>
               </div>
-              <div style="flex-shrink:0;padding-bottom:1px;display:flex;flex-direction:column;gap:4px">
+              <div style="flex-shrink:0;padding-bottom:1px">
                 <div class="allow-unknown-row" style="margin-bottom:0;padding:6px 10px">
                   <input type="checkbox" id="runUnloadProcess" checked style="accent-color:#19427C;width:14px;height:14px"/>
                   <label for="runUnloadProcess" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer;white-space:nowrap">Unload</label>
-                </div>
-                <div class="allow-unknown-row" style="margin-bottom:0;padding:6px 10px">
-                  <input type="checkbox" id="runContainers" style="accent-color:#19427C;width:14px;height:14px"/>
-                  <label for="runContainers" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer;white-space:nowrap">Containers</label>
                 </div>
               </div>
             </div>
@@ -396,6 +392,11 @@
                 <label>Tag ID <span style="font-weight:400;color:#95a5a6;font-size:10px">opt.</span></label>
                 <input type="text" id="runTagId" placeholder="Tag ID" autocomplete="off"/>
               </div>
+            </div>
+            <!-- Containers checkbox -->
+            <div class="allow-unknown-row" style="margin-top:4px">
+              <input type="checkbox" id="runContainers" style="accent-color:#19427C;width:14px;height:14px"/>
+              <label for="runContainers" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer">Containers</label>
             </div>
           </div>
         </div>
@@ -1214,8 +1215,13 @@ function buildXML() {
       <ExternalId>${escX(runExtId)}</ExternalId>
       <Name>${escX(runNameVal)}</Name>${runDateXml ? `
       <RunDate>${escX(runDateXml)}</RunDate>` : ''}
-      <Status>New</Status>${driverVal  ? `\n      <Driver>${escX(driverVal)}</Driver>`   : ''}${vehicleVal ? `\n      <Vehicle>${escX(vehicleVal)}</Vehicle>` : ''}${tagIdVal   ? `\n      <TagId>${escX(tagIdVal)}</TagId>` : ''}
-      <UnloadProcess>${unloadProcess}</UnloadProcess>${runPhasesXml}
+      <Status>New</Status>${driverVal  ? `\n      <Driver>${escX(driverVal)}</Driver>`   : ''}${vehicleVal ? `\n      <Vehicle>${escX(vehicleVal)}</Vehicle>` : ''}
+      <UnloadProcess>${unloadProcess}</UnloadProcess>${tagIdVal ? `
+      <TagsListImport>
+        <TagImport>
+          <Tag>${escX(tagIdVal)}</Tag>
+        </TagImport>
+      </TagsListImport>` : ''}${runPhasesXml}
     </RunImport>
   </RunListImport>`;
 
@@ -1818,8 +1824,8 @@ function createQuickRun() {
     (lat, lng, i) => ({
       lat, lng, name: getName(i),
       deliveries:  [
-        { items:2, act: a => { a.pop.enabled=true; a.pop.barcode='1234'; } },
         { items:3, act: a => { a.cod.enabled=true; a.cod.amount=10; } },
+        { items:2, act: a => { a.pop.enabled=true; a.pop.barcode='1234'; } },
       ],
       collections: [],
     }),
