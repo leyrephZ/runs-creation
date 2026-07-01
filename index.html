@@ -544,6 +544,7 @@ const S = {
   lastDt: '',       // dt string from last buildXML (for barcode modal)
   lastSid: '',      // sid from last buildXML
   lastRunExtId: '',
+  isQuickRun: false,
 };
 
 const emptyAddr   = () => ({ street:'', number:'', city:'', zip:'', country:'' });
@@ -1701,8 +1702,12 @@ function closeBarcodeModal() {
 
 // ── Tenant selector ────────────────────────────────────────
 function onTenantChange() {
-  const isOther = document.getElementById('api-tenant').value === 'other';
-  document.getElementById('api-custom-url-wrap').style.display = isOther ? 'block' : 'none';
+  const val = document.getElementById('api-tenant').value;
+  document.getElementById('api-custom-url-wrap').style.display = val === 'other' ? 'block' : 'none';
+  if (S.isQuickRun) {
+    const tagEl = document.getElementById('runTagId');
+    if (tagEl) tagEl.value = val === 'chronos_qa' ? 'AllActionsAccept' : '';
+  }
 }
 
 // ── Reset app ──────────────────────────────────────────────
@@ -1717,7 +1722,7 @@ function resetApp() {
   // Reset state
   S.step = 1; S.site = null; S.stops = []; S.routeLines = [];
   S.editStopId = null; S.nextId = 1; S.nextSvcId = 1;
-  S.lastDt = ''; S.lastSid = ''; S.lastRunExtId = '';
+  S.lastDt = ''; S.lastSid = ''; S.lastRunExtId = ''; S.isQuickRun = false;
   RUN_PHASES.forEach(p => { runPhaseActions[p.key] = emptyRunPhaseAct(); });
   _xmlString = '';
 
@@ -1754,11 +1759,15 @@ function createQuickRun() {
   S.routeLines.forEach(l => map.removeLayer(l));
   S.step = 1; S.site = null; S.stops = []; S.routeLines = [];
   S.editStopId = null; S.nextId = 1; S.nextSvcId = 1;
-  S.lastDt = ''; S.lastSid = ''; S.lastRunExtId = '';
+  S.lastDt = ''; S.lastSid = ''; S.lastRunExtId = ''; S.isQuickRun = true;
   RUN_PHASES.forEach(p => { runPhaseActions[p.key] = emptyRunPhaseAct(); });
   _xmlString = '';
   ['siteId','siteAddr','siteCoords','runDriver','runVehicle','runTagId']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  // Auto-fill tag if QA tenant already selected
+  if (document.getElementById('api-tenant').value === 'chronos_qa') {
+    document.getElementById('runTagId').value = 'AllActionsAccept';
+  }
   document.getElementById('runUnloadProcess').checked = true;
   document.getElementById('runContainers').checked = true;
   document.getElementById('site-coords-wrap').style.display = 'none';
