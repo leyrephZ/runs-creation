@@ -403,11 +403,12 @@
 
         <!-- ③ RUN-LEVEL ACTIONS ──────────────────────────────── -->
         <div class="step-section">
-          <button class="step-sec-head" onclick="toggleStepSection('run-actions')">
+          <div class="step-sec-head" onclick="toggleStepSection('run-actions')">
             <span class="step-sec-title">&#9654; Run-Level Actions</span>
             <span class="step-sec-badge" id="badge-run-actions" style="display:none"></span>
+            <button onclick="event.stopPropagation();clearRunPhaseActions()" id="btn-clear-run-actions" style="display:none;padding:2px 8px;font-size:10px;font-weight:700;border:1.5px solid #c0d4ee;border-radius:4px;background:white;color:#5d6d7e;cursor:pointer;" onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background='white'">&#10005; Clear</button>
             <span class="step-sec-caret" id="caret-run-actions">&#9660;</span>
-          </button>
+          </div>
           <div class="step-sec-body" id="body-run-actions" style="display:none">
             <div id="run-phases-ui"></div>
           </div>
@@ -1996,6 +1997,15 @@ function renderRunPhasesUI() {
       </div>
     </div>`;
   }).join('');
+  // Show/hide the Clear button depending on whether any phase has active actions
+  const anyActive = RUN_PHASES.some(p => Object.values(runPhaseActions[p.key]).some(a => a.enabled));
+  const btn = document.getElementById('btn-clear-run-actions');
+  if (btn) btn.style.display = anyActive ? '' : 'none';
+}
+
+function clearRunPhaseActions() {
+  RUN_PHASES.forEach(p => { runPhaseActions[p.key] = emptyRunPhaseAct(); });
+  renderRunPhasesUI();
 }
 
 function togglePhaseBlock(phaseKey) {
