@@ -902,7 +902,7 @@ function renderSvcCard(svc, type, idx, collapsed=false) {
       ${itDropdown}
       ${unknownToggle}
       ${itColCheck}
-      <div class="actions-title">Actions (IsMandatory = true)</div>
+      <div class="actions-title">Actions (IsMandatory = false)</div>
       ${actRows}
     </div>
   </div>`;
@@ -1320,7 +1320,7 @@ function genActions(svc, type) {
 
   if (a.picture?.enabled)
     xml+=`\n          <TakeAPictureImport>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <MinImages>1</MinImages>
             <MaxImages>4</MaxImages>
@@ -1328,7 +1328,7 @@ function genActions(svc, type) {
 
   if (a.signature?.enabled)
     xml+=`\n          <SignatureImport>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <RequireName>Mandatory</RequireName>
             <RequireEmail>Optional</RequireEmail>
@@ -1341,7 +1341,7 @@ function genActions(svc, type) {
   // ChargeOfDelivery is now available for both deliveries and collections
   if (a.cod?.enabled)
     xml+=`\n          <ChargeOfDelivery>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <Amount>${a.cod.amount.toFixed(2)}</Amount>${COD_PAYMENTS_XML}
             <Currency>EUR</Currency>
@@ -1349,28 +1349,28 @@ function genActions(svc, type) {
 
   if (a.pop?.enabled)
     xml+=`\n          <ProofOfPresence>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <Barcode>${escX(a.pop.barcode)}</Barcode>
           </ProofOfPresence>`;
 
   if (a.comment?.enabled)
     xml+=`\n          <Comment>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <Tooltip>${escX(a.comment.tooltip)}</Tooltip>
           </Comment>`;
 
   if (a.asset?.enabled)
     xml+=`\n          <Asset>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <Process>${a.asset.process}</Process>
           </Asset>`;
 
   if (a.pin?.enabled)
     xml+=`\n          <PinCode>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <RetryWrongEntryTimes>3</RetryWrongEntryTimes>
             <DoorPinActionType>ValidateDailyPin</DoorPinActionType>
@@ -1378,7 +1378,7 @@ function genActions(svc, type) {
 
   if (a.scanDoc?.enabled)
     xml+=`\n          <ScanDocument>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <MinimumPages>1</MinimumPages>
             <MaximumPages>6</MaximumPages>
@@ -1386,7 +1386,7 @@ function genActions(svc, type) {
 
   if (a.link?.enabled)
     xml+=`\n          <OpenLink>
-            <IsMandatory>true</IsMandatory>
+            <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
             <URL>${escX(a.link.url)}</URL>
           </OpenLink>`;
@@ -1991,7 +1991,7 @@ function renderRunPhasesUI() {
         <span class="phase-caret" id="phase-caret-${phase.key}">&#9660;</span>
       </div>
       <div class="phase-body" id="phase-body-${phase.key}">
-        <div class="actions-title">Actions (IsMandatory = true)</div>
+        <div class="actions-title">Actions (IsMandatory = false)</div>
         ${actRows}
       </div>
     </div>`;
