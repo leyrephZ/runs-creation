@@ -1324,22 +1324,22 @@ function genActions(svc, type) {
     xml+=`\n          <TakeAPictureImport>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Take a picture</Title>
             <MinImages>1</MinImages>
             <MaxImages>4</MaxImages>
+            <ActionTitle>Take a picture</ActionTitle>
           </TakeAPictureImport>`;
 
   if (a.signature?.enabled)
     xml+=`\n          <SignatureImport>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Signature</Title>
             <RequireName>Mandatory</RequireName>
             <RequireEmail>Optional</RequireEmail>
             <RequireSignature>Mandatory</RequireSignature>
             <RequireID>Optional</RequireID>
             <RequireSignatureOnPaper>Disabled</RequireSignatureOnPaper>
             <RequireSignaturePicture>Disabled</RequireSignaturePicture>
+            <ActionTitle>Signature</ActionTitle>
           </SignatureImport>`;
 
   // ChargeOfDelivery is now available for both deliveries and collections
@@ -1347,32 +1347,32 @@ function genActions(svc, type) {
     xml+=`\n          <ChargeOfDelivery>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Charge of delivery</Title>
             <Amount>${a.cod.amount.toFixed(2)}</Amount>${COD_PAYMENTS_XML}
             <Currency>EUR</Currency>
+            <ActionTitle>Charge of delivery</ActionTitle>
           </ChargeOfDelivery>`;
 
   if (a.pop?.enabled)
     xml+=`\n          <ProofOfPresence>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Proof of presence</Title>
             <Barcode>${escX(a.pop.barcode)}</Barcode>
+            <ActionTitle>Proof of presence</ActionTitle>
           </ProofOfPresence>`;
 
   if (a.comment?.enabled)
     xml+=`\n          <Comment>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Comment</Title>
             <Tooltip>${escX(a.comment.tooltip)}</Tooltip>
+            <ActionTitle>Comment</ActionTitle>
           </Comment>`;
 
   if (a.asset?.enabled)
     xml+=`\n          <Asset>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Asset</Title>
+            <ActionTitle>Asset</ActionTitle>
             <Process>${a.asset.process}</Process>
           </Asset>`;
 
@@ -1380,7 +1380,7 @@ function genActions(svc, type) {
     xml+=`\n          <PinCode>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Pin code</Title>
+            <ActionTitle>Pin code</ActionTitle>
             <RetryWrongEntryTimes>3</RetryWrongEntryTimes>
             <DoorPinActionType>ValidateDailyPin</DoorPinActionType>
           </PinCode>`;
@@ -1389,7 +1389,7 @@ function genActions(svc, type) {
     xml+=`\n          <ScanDocument>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Scan document</Title>
+            <ActionTitle>Scan document</ActionTitle>
             <MinimumPages>1</MinimumPages>
             <MaximumPages>6</MaximumPages>
           </ScanDocument>`;
@@ -1398,7 +1398,7 @@ function genActions(svc, type) {
     xml+=`\n          <OpenLink>
             <IsMandatory>false</IsMandatory>
             <Sequence>${seq++}</Sequence>
-            <Title>Open link</Title>
+            <ActionTitle>Open link</ActionTitle>
             <URL>${escX(a.link.url)}</URL>
           </OpenLink>`;
 
