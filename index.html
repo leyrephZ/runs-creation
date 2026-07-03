@@ -1612,6 +1612,15 @@ function openBarcodeModal() {
     html += `</div></div>`;
   }
 
+  // ── AllActionsAccept tag → Accept Run scan barcode ─────────
+  if (document.getElementById('runTagId').value.trim() === 'AllActionsAccept') {
+    html += `<div style="margin-bottom:14px;border-left:3px solid #19427C;padding-left:12px;">
+      <div style="font-size:12px;font-weight:700;color:#19427C;margin-bottom:6px">🏷️ Accept Run — Scan to accept</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+    html += _bcCard(barcodeItems, '12345678', 'Accept Run');
+    html += `</div></div>`;
+  }
+
   // ── Stops ─────────────────────────────────────────────────
   S.stops.forEach((stop, si) => {
     const seq = si + 1;
