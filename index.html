@@ -1936,6 +1936,8 @@ function createQuickRun() {
   updateRoute();
   setStep(3);
   setHint('');
+  // Rebuild XML once all reverse-geocoding resolves so addresses appear in the output
+  geoQ.then(() => { if (S.step === 3) buildXML(); });
 }
 
 // ══════════════════════════════════════════════════════════════
