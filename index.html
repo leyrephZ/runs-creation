@@ -231,17 +231,32 @@
     .step2-map #map { cursor:crosshair; }
 
     @media (max-width: 700px) {
-      .sidebar { position:absolute; left:0; top:0; height:100%; box-shadow:4px 0 20px rgba(0,0,0,.15); z-index:25; }
-      .sidebar.collapsed { box-shadow:none; }
-      /* When collapsed on mobile, fix the tab to left edge so it stays visible */
-      .sidebar.collapsed .sidebar-tab {
-        position:fixed;
-        left:0;
-        right:auto;
-        border-radius:0 8px 8px 0;
-      }
+      /* Sidebar covers full screen on mobile */
+      .sidebar { position:fixed; left:0; top:0; width:100% !important; max-width:100% !important; min-width:0; height:100%; z-index:200; box-shadow:none; transition:transform .25s ease; transform:translateX(0); }
+      .sidebar.collapsed { transform:translateX(-100%); box-shadow:none; }
+      /* Hide the old side tab on mobile */
+      .sidebar-tab { display:none !important; }
       .step-label { display:none; }
     }
+
+    /* Mobile overlay (tapping closes panel) */
+    .mob-overlay {
+      display:none;
+      position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:199;
+    }
+
+    /* FAB — floating action button to open panel on mobile */
+    .mob-fab {
+      display:none;
+      position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+      background:#19427C; color:white;
+      border:none; border-radius:28px; padding:13px 26px;
+      font-size:15px; font-weight:700; cursor:pointer;
+      box-shadow:0 4px 18px rgba(0,0,0,.35);
+      z-index:198; align-items:center; gap:8px;
+      white-space:nowrap;
+    }
+    .mob-fab:active { background:#12182c; }
 
     /* RUN PHASES */
     .phase-block { border:1.5px solid #d0e0f5; border-radius:8px; margin-bottom:7px; overflow:hidden; }
@@ -296,6 +311,11 @@
 </div>
 
 <!-- MAIN -->
+<!-- Mobile overlay -->
+<div class="mob-overlay" id="mob-overlay" onclick="toggleSidebar()"></div>
+<!-- Mobile FAB -->
+<button class="mob-fab" id="mob-fab" onclick="toggleSidebar()">&#9776; Abrir panel</button>
+
 <div class="main" id="main-layout">
 
   <!-- SIDEBAR -->
@@ -1024,6 +1044,11 @@ function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
   document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
   document.getElementById('sidebar-tab').innerHTML = sidebarOpen ? '&#9664;' : '&#9654;';
+  const isMob = window.innerWidth <= 700;
+  const overlay = document.getElementById('mob-overlay');
+  const fab = document.getElementById('mob-fab');
+  if (overlay) overlay.style.display = isMob && sidebarOpen ? 'block' : 'none';
+  if (fab) fab.style.display = isMob && !sidebarOpen ? 'flex' : 'none';
   setTimeout(() => map.invalidateSize(), 260);
 }
 
@@ -2212,8 +2237,11 @@ async function sendToAPI() {
 // Render run phase action blocks in step 1
 renderRunPhasesUI();
 
-// Collapse sidebar by default on small screens but keep tab visible
-if (window.innerWidth < 700) toggleSidebar();
+// On mobile: start collapsed, show FAB
+if (window.innerWidth <= 700) {
+  sidebarOpen = true; // toggleSidebar will flip it
+  toggleSidebar();
+}
 
 setStep(1);
 </script>
