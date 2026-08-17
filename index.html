@@ -333,7 +333,10 @@
             <span class="step-sec-caret" id="caret-site" style="transform:rotate(180deg)">&#9660;</span>
           </button>
           <div class="step-sec-body" id="body-site">
-            <div class="info-box" style="margin-bottom:12px"><p>&#128205; <strong>Click on the map</strong> to place the warehouse, then fill the ID below.</p></div>
+            <div class="info-box" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <p style="flex:1;min-width:0">&#128205; <strong>Click on the map</strong> to place the warehouse, then fill the ID below.</p>
+              <button class="btn btn-secondary" onclick="toggleSidebar()" style="white-space:nowrap;flex-shrink:0">&#128506; Use map</button>
+            </div>
             <div class="form-group">
               <label>Site External ID *</label>
               <input type="text" id="siteId" placeholder="e.g. WAREHOUSE_MAD_01" oninput="onSiteIdChange()" autocomplete="off"/>
@@ -429,7 +432,10 @@
             <button onclick="navigateToStep(1)" style="padding:4px 9px;font-size:11px;font-weight:700;border:1.5px solid #b8cfec;border-radius:5px;background:white;color:#19427C;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Edit warehouse settings">&#9998; Edit</button>
           </div>
         </div>
-        <div class="info-box"><p>&#128205; <strong>Click anywhere on the map</strong> to add a stop. Drag to reorder. Click &#9881; to configure services.</p></div>
+        <div class="info-box" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <p style="flex:1;min-width:0">&#128205; <strong>Click anywhere on the map</strong> to add a stop. Drag to reorder. Click &#9881; to configure services.</p>
+          <button class="btn btn-secondary" onclick="toggleSidebar()" style="white-space:nowrap;flex-shrink:0">&#128506; Use map</button>
+        </div>
         <div id="p2-warn" class="warn-box" style="margin-top:0;margin-bottom:10px"></div>
         <div class="sec-title"><span>&#128506;</span> Route Stops <span style="margin-left:auto;font-size:11px;color:#7f8c8d;font-weight:500" id="stop-count-lbl"></span></div>
         <ul class="stop-list" id="stop-list"></ul>
@@ -498,6 +504,10 @@
   <div class="map-wrap" id="map-wrap">
     <div id="map"></div>
     <div class="map-hint" id="map-hint">Click on the map to place the warehouse location</div>
+    <button id="map-panel-btn" onclick="toggleSidebar()"
+      style="position:absolute;top:10px;left:10px;z-index:800;background:#19427C;color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px">
+      &#9776; Panel
+    </button>
   </div>
 
 </div><!-- /main -->
