@@ -307,7 +307,7 @@
     <div style="background:linear-gradient(135deg,#d16c19,#e8813a);padding:11px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 2px 8px rgba(209,108,25,.3);">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:800;color:white;letter-spacing:.2px">&#9889; Generate a demo run instantly</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">Skips steps 1–3 · places site, stops &amp; XML automatically</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">Auto-generates site, stops &amp; XML</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         <div style="display:flex;align-items:center;background:rgba(255,255,255,.2);border-radius:6px;overflow:hidden;">
@@ -724,7 +724,10 @@ function placeSite(lat, lng) {
   });
 }
 function onSiteIdChange() {
-  if (S.site) S.site.externalId = document.getElementById('siteId').value.trim();
+  const el = document.getElementById('siteId');
+  const val = el.value.trim();
+  el.style.borderColor = val ? '' : '#e74c3c';
+  if (S.site) S.site.externalId = val;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1795,6 +1798,7 @@ function resetApp() {
 
   // Rebuild UI
   renderRunPhasesUI();
+  document.getElementById('siteId').style.borderColor = '#e74c3c';
   setStep(1);
   setHint('Click on the map to place the warehouse.');
   map.setView([48.5, 10.5], 5);
@@ -1829,6 +1833,7 @@ function createQuickRun() {
   // 2. Place warehouse
   const siteLat = 40.524335, siteLng = -3.658831;
   document.getElementById('siteId').value = 'Site01';
+  document.getElementById('siteId').style.borderColor = '';
   placeSite(siteLat, siteLng);   // sets S.site and triggers geocode
 
   // 3. Run name / date
@@ -2246,6 +2251,8 @@ renderRunPhasesUI();
 // Panel always starts open
 
 setStep(1);
+// Mark siteId red on load (empty)
+document.getElementById('siteId').style.borderColor = '#e74c3c';
 </script>
 </body>
 </html>
