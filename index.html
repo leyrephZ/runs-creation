@@ -17,7 +17,7 @@
     body { font-family:'Segoe UI',system-ui,sans-serif; background:#eef3fa; color:#2c3e50; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
     /* HEADER */
-    .header { background:linear-gradient(135deg,#12182c,#19427C); color:white; padding:11px 22px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 12px rgba(0,0,0,.3); flex-shrink:0; z-index:100; }
+    .header { background:linear-gradient(135deg,#12182c,#19427C); color:white; padding:11px 22px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 12px rgba(0,0,0,.3); flex-shrink:0; z-index:210; position:relative; }
     .header-icon { width:36px; height:36px; background:rgba(255,255,255,.15); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:19px; }
     .header-title { font-size:16px; font-weight:700; }
     .header-sub { font-size:11.5px; opacity:.7; margin-top:1px; }
@@ -295,7 +295,7 @@
 
 <!-- MAIN -->
 <!-- Overlay (closes panel when tapped) -->
-<div class="mob-overlay" id="mob-overlay" onclick="toggleSidebar()"></div>
+<div class="mob-overlay" id="mob-overlay"></div>
 
 <div class="main" id="main-layout">
 
@@ -1031,12 +1031,30 @@ function saveStop() {
 // SIDEBAR TOGGLE
 // ══════════════════════════════════════════════════════════════
 let sidebarOpen = true;
+let _toggleTs = 0;
 function toggleSidebar() {
+  const now = Date.now();
+  if (now - _toggleTs < 350) return; // guard against ghost clicks
+  _toggleTs = now;
   sidebarOpen = !sidebarOpen;
   document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
   document.getElementById('sidebar-tab').innerHTML = sidebarOpen ? '&#9664;' : '&#9654;';
   const overlay = document.getElementById('mob-overlay');
-  if (overlay) overlay.style.display = sidebarOpen ? 'block' : 'none';
+  if (overlay) {
+    overlay.style.display = sidebarOpen ? 'block' : 'none';
+    // attach close handler with delay so the current event doesn't immediately re-fire
+    if (sidebarOpen) {
+      overlay.ontouchstart = null;
+      overlay.onclick = null;
+      setTimeout(() => {
+        overlay.onclick = () => toggleSidebar();
+        overlay.ontouchstart = (e) => { e.preventDefault(); toggleSidebar(); };
+      }, 400);
+    } else {
+      overlay.onclick = null;
+      overlay.ontouchstart = null;
+    }
+  }
   setTimeout(() => map.invalidateSize(), 260);
 }
 
@@ -2225,8 +2243,7 @@ async function sendToAPI() {
 // Render run phase action blocks in step 1
 renderRunPhasesUI();
 
-// Start with panel open on desktop, collapsed on small screens
-if (window.innerWidth <= 900) toggleSidebar();
+// Panel always starts open
 
 setStep(1);
 </script>
