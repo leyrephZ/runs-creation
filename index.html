@@ -130,7 +130,7 @@
     .icon-btn-del:hover { background:#f5b7b1; }
 
     /* SUMMARY */
-    .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
+    .summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:6px; margin-bottom:12px; }
     .sum-card { background:white; border:1.5px solid #d0e0f5; border-left:4px solid #19427C; border-radius:7px; padding:8px 10px; display:flex; align-items:center; gap:8px; }
     .sum-card.orange { border-left-color:#d16c19; }
     .sum-card-icon { font-size:16px; line-height:1; }
@@ -480,8 +480,8 @@
               value="https://OTHER_CHRONOS_URL.api.cloud.zetes.com/api/v1.0/maintenance/import"
               style="width:100%;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12px;color:#2c3e50"/>
           </div>
-          <div class="api-row">
-            <input type="password" id="api-token" placeholder="Reference token…" style="flex:1;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12.5px;font-family:monospace;"/>
+          <div class="api-row" style="flex-wrap:wrap">
+            <input type="password" id="api-token" placeholder="Reference token…" style="flex:1;min-width:120px;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12.5px;font-family:monospace;"/>
             <button class="btn btn-primary" onclick="sendToAPI()" id="btn-send-api" style="white-space:nowrap">&#128640; Send</button>
             <button class="btn" onclick="cancelAPI()" id="btn-cancel-api" style="display:none;white-space:nowrap;background:#fdecea;color:#c0392b;border:1.5px solid #f5b7b1">&#9632; Cancel</button>
           </div>
