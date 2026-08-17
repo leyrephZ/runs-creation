@@ -35,10 +35,10 @@
     .connector.done { background:#d16c19; }
 
     /* LAYOUT */
-    .main { display:flex; flex:1; overflow:hidden; position:relative; }
+    .main { display:flex; flex:1; position:relative; }
 
-    /* SIDEBAR — fixed overlay, not clipped by .main overflow */
-    .sidebar { width:min(360px,92vw); background:white; display:flex; flex-direction:column; overflow:hidden; position:fixed; left:0; top:0; height:100vh; z-index:1000; box-shadow:4px 0 24px rgba(0,0,0,.22); transition:transform .22s ease; transform:translateX(0); }
+    /* SIDEBAR — absolute within .main so it sits below header/steps */
+    .sidebar { width:min(360px,92vw); background:white; display:flex; flex-direction:column; overflow:hidden; position:absolute; left:0; top:0; height:100%; z-index:500; box-shadow:4px 0 24px rgba(0,0,0,.22); transition:transform .22s ease; transform:translateX(0); }
     .sidebar.collapsed { transform:translateX(-105%); }
     .sidebar-body { flex:1; overflow-y:auto; padding:18px; }
     .sidebar-foot { padding:12px 18px; border-top:1px solid #c5d9f0; display:flex; gap:8px; }
@@ -61,7 +61,7 @@
     .sidebar-tab:hover { background:#12182c; }
 
     /* MAP */
-    .map-wrap { flex:1; position:relative; }
+    .map-wrap { flex:1; position:relative; z-index:0; }
     #map { width:100%; height:100%; }
     .map-hint { position:absolute; bottom:26px; left:50%; transform:translateX(-50%); background:rgba(18,24,44,.9); color:white; padding:8px 18px; border-radius:22px; font-size:12px; z-index:800; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,.2); white-space:nowrap; transition:opacity .3s; }
     .map-hint.hidden { opacity:0; }
@@ -235,10 +235,10 @@
       .step-label { display:none; }
     }
 
-    /* Overlay behind open sidebar */
+    /* Overlay behind open sidebar — inside .main */
     .mob-overlay {
       display:none;
-      position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:999;
+      position:absolute; inset:0; background:rgba(0,0,0,.4); z-index:499;
     }
 
     /* RUN PHASES */
@@ -294,10 +294,10 @@
 </div>
 
 <!-- MAIN -->
-<!-- Overlay (closes panel when tapped) -->
-<div class="mob-overlay" id="mob-overlay"></div>
-
 <div class="main" id="main-layout">
+
+  <!-- Overlay (closes panel when tapped, sits inside .main) -->
+  <div class="mob-overlay" id="mob-overlay"></div>
 
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
