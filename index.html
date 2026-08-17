@@ -462,10 +462,12 @@
             <select id="api-tenant" onchange="onTenantChange()">
               <option value="chronos_qa">chronos_qa — QA</option>
               <option value="client2">client2 — DEV2</option>
+              <option value="multitenant_dev">multitenant — DEV</option>
               <option value="zetes">zetes — PRD</option>
               <option value="other">Other…</option>
             </select>
           </div>
+
           <div id="api-custom-url-wrap" style="display:none;margin-bottom:7px">
             <input type="url" id="api-custom-url"
               value="https://OTHER_CHRONOS_URL.api.cloud.zetes.com/api/v1.0/maintenance/import"
@@ -2091,6 +2093,10 @@ const API_TENANTS = {
     label: 'client2 (DEV2)',
     url:   'https://chronos-api-dev2-linux.azurewebsites.net/api/v1.0/maintenance/import',
   },
+  multitenant_dev: {
+    label: 'multitenant (DEV)',
+    url:   'https://chronos-api-multitenant-dev.cloud.zetes.com/api/v1.0/maintenance/import',
+  },
   zetes: {
     label: 'zetes (PRD)',
     url:   'https://chronos-api.cloud.zetes.com/api/v1.0/maintenance/import',
@@ -2113,9 +2119,12 @@ async function sendToAPI() {
   const tenantKey  = document.getElementById('api-tenant').value;
   const tenant     = API_TENANTS[tenantKey];
   const token      = document.getElementById('api-token').value.trim();
-  const requestUrl = tenantKey === 'other'
-    ? document.getElementById('api-custom-url').value.trim()
-    : tenant.url;
+  let requestUrl;
+  if (tenantKey === 'other') {
+    requestUrl = document.getElementById('api-custom-url').value.trim();
+  } else {
+    requestUrl = tenant.url;
+  }
 
   const resEl     = document.getElementById('api-response');
   const btn       = document.getElementById('btn-send-api');
