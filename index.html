@@ -718,6 +718,7 @@ function placeSite(lat, lng) {
   document.getElementById('site-coords-wrap').style.display = 'flex';
   document.getElementById('p1-warn').style.display = 'none';
   setHint('Warehouse placed. Complete the fields and click <strong>Next</strong>.');
+  if (!sidebarOpen) toggleSidebar();
   reverseGeocode(lat, lng, ({ display, parsed }) => {
     S.site.address = display; S.site.addrParsed = parsed;
     document.getElementById('siteAddr').value = display; // always update
