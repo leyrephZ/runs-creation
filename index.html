@@ -17,13 +17,13 @@
     body { font-family:'Segoe UI',system-ui,sans-serif; background:#eef3fa; color:#2c3e50; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
     /* HEADER */
-    .header { background:linear-gradient(135deg,#12182c,#19427C); color:white; padding:11px 22px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 12px rgba(0,0,0,.3); flex-shrink:0; z-index:210; position:relative; }
+    .header { background:linear-gradient(135deg,#12182c,#19427C); color:white; padding:11px 22px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 12px rgba(0,0,0,.3); flex-shrink:0; z-index:1100; position:relative; }
     .header-icon { width:36px; height:36px; background:rgba(255,255,255,.15); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:19px; }
     .header-title { font-size:16px; font-weight:700; }
     .header-sub { font-size:11.5px; opacity:.7; margin-top:1px; }
 
     /* STEPS */
-    .steps-bar { background:white; padding:12px 24px; display:flex; align-items:center; justify-content:center; border-bottom:1px solid #c5d9f0; box-shadow:0 1px 5px rgba(0,0,0,.06); flex-shrink:0; }
+    .steps-bar { background:white; padding:12px 24px; display:flex; align-items:center; justify-content:center; border-bottom:1px solid #c5d9f0; box-shadow:0 1px 5px rgba(0,0,0,.06); flex-shrink:0; position:relative; z-index:1100; }
     .step { display:flex; align-items:center; gap:7px; }
     .step-circle { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; border:2px solid #b8cfec; color:#b8cfec; background:white; transition:all .2s; }
     .step.active .step-circle { background:#19427C; color:white; border-color:#19427C; }
@@ -37,9 +37,9 @@
     /* LAYOUT */
     .main { display:flex; flex:1; overflow:hidden; position:relative; }
 
-    /* SIDEBAR — always overlays the map */
-    .sidebar { width:min(360px,88vw); background:white; display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; position:absolute; left:0; top:0; height:100%; z-index:200; box-shadow:4px 0 24px rgba(0,0,0,.18); transition:transform .22s ease; transform:translateX(0); }
-    .sidebar.collapsed { transform:translateX(-110%); box-shadow:none; }
+    /* SIDEBAR — fixed overlay, not clipped by .main overflow */
+    .sidebar { width:min(360px,92vw); background:white; display:flex; flex-direction:column; overflow:hidden; position:fixed; left:0; top:0; height:100vh; z-index:1000; box-shadow:4px 0 24px rgba(0,0,0,.22); transition:transform .22s ease; transform:translateX(0); }
+    .sidebar.collapsed { transform:translateX(-105%); }
     .sidebar-body { flex:1; overflow-y:auto; padding:18px; }
     .sidebar-foot { padding:12px 18px; border-top:1px solid #c5d9f0; display:flex; gap:8px; }
 
@@ -238,7 +238,7 @@
     /* Overlay behind open sidebar */
     .mob-overlay {
       display:none;
-      position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:199;
+      position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:999;
     }
 
     /* RUN PHASES */
