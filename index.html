@@ -481,9 +481,14 @@
               style="width:100%;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12px;color:#2c3e50"/>
           </div>
           <div class="api-row" style="flex-wrap:wrap">
-            <input type="password" id="api-token" placeholder="Reference token…" style="flex:1;min-width:120px;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12.5px;font-family:monospace;"/>
+            <input type="password" id="api-token" placeholder="Reference token…" oninput="onTokenInput()" autocomplete="off" style="flex:1;min-width:120px;padding:8px 10px;border:1.5px solid #b8cfec;border-radius:6px;font-size:12.5px;font-family:monospace;"/>
             <button class="btn btn-primary" onclick="sendToAPI()" id="btn-send-api" style="white-space:nowrap">&#128640; Send</button>
             <button class="btn" onclick="cancelAPI()" id="btn-cancel-api" style="display:none;white-space:nowrap;background:#fdecea;color:#c0392b;border:1.5px solid #f5b7b1">&#9632; Cancel</button>
+          </div>
+          <div id="token-saved-hint" style="display:none;align-items:center;gap:6px;margin-top:5px;font-size:10.5px;color:#1e6b3b">
+            <span>&#128274; Token saved for this environment</span>
+            <button onclick="clearSavedToken()" title="Forget this token"
+              style="background:none;border:none;color:#c0392b;font-size:10.5px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline">forget</button>
           </div>
           <div class="api-response" id="api-response"></div>
         </div>
@@ -1757,10 +1762,48 @@ function closeBarcodeModal() {
   document.getElementById('barcode-modal').classList.remove('open');
 }
 
+// ── Token persistence, one token per environment ────────────
+// Stored in this browser's localStorage only — never sent anywhere
+// except the Chronos API call the user explicitly triggers.
+const TOKEN_KEY = k => `runcreator.token.${k}`;
+
+function loadToken(tenantKey) {
+  try { return localStorage.getItem(TOKEN_KEY(tenantKey)) || ''; }
+  catch { return ''; }
+}
+function storeToken(tenantKey, token) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY(tenantKey), token);
+    else localStorage.removeItem(TOKEN_KEY(tenantKey));
+  } catch { /* private mode / site data blocked — silently skip */ }
+}
+function onTokenInput() {
+  storeToken(document.getElementById('api-tenant').value,
+             document.getElementById('api-token').value.trim());
+  refreshTokenHint();
+}
+function refreshTokenHint() {
+  const el = document.getElementById('token-saved-hint');
+  if (!el) return;
+  const saved = loadToken(document.getElementById('api-tenant').value);
+  el.style.display = saved ? 'flex' : 'none';
+}
+function clearSavedToken() {
+  storeToken(document.getElementById('api-tenant').value, '');
+  document.getElementById('api-token').value = '';
+  refreshTokenHint();
+}
+function applyStoredToken() {
+  document.getElementById('api-token').value =
+    loadToken(document.getElementById('api-tenant').value);
+  refreshTokenHint();
+}
+
 // ── Tenant selector ────────────────────────────────────────
 function onTenantChange() {
   const val = document.getElementById('api-tenant').value;
   document.getElementById('api-custom-url-wrap').style.display = val === 'other' ? 'block' : 'none';
+  applyStoredToken();
   if (S.isQuickRun) {
     const tagEl = document.getElementById('runTagId');
     if (tagEl) tagEl.value = val === 'chronos_qa' ? 'AllActionsAccept' : '';
@@ -1784,7 +1827,7 @@ function resetApp() {
   _xmlString = '';
 
   // Reset form fields
-  ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId','api-token']
+  ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('runUnloadProcess').checked = true;
   document.getElementById('runContainers').checked = false;
@@ -2256,6 +2299,8 @@ renderRunPhasesUI();
 setStep(1);
 // Mark siteId red on load (empty)
 document.getElementById('siteId').style.borderColor = '#e74c3c';
+// Restore the token saved for the selected environment
+applyStoredToken();
 </script>
 </body>
 </html>
