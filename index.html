@@ -1516,6 +1516,7 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}, 
         <GPSPoints>
           <Latitude>${stop.lat.toFixed(6)}</Latitude>
           <Longitude>${stop.lng.toFixed(6)}</Longitude>
+          <GeofencingThreshold>50</GeofencingThreshold>
         </GPSPoints>
         <Status>New</Status>
         <DeliveryType>Delivery</DeliveryType>${items}${genActions(svc,'del')}
@@ -1539,6 +1540,7 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers
         <GPSPoints>
           <Latitude>${stop.lat.toFixed(6)}</Latitude>
           <Longitude>${stop.lng.toFixed(6)}</Longitude>
+          <GeofencingThreshold>50</GeofencingThreshold>
         </GPSPoints>
         <Status>New</Status>
         <CollectionType>${svc.isInternalTransfer ? 'InternalTransfer' : 'Collection'}</CollectionType>
