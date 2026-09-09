@@ -621,13 +621,35 @@ const newDel = () => ({ svcId:S.nextSvcId++, items:1, pta:'', internalTransferSr
 const newCol = () => ({ svcId:S.nextSvcId++, items:1, isInternalTransfer:false, allowUnknown:false, pta:'', actions:emptyColAct() });
 
 // ══════════════════════════════════════════════════════════════
-// MAP — CartoDB tiles (no referer restriction)
+// MAP — key-free tile providers (CARTO now watermarks without an API key)
 // ══════════════════════════════════════════════════════════════
 const map = L.map('map', { zoomControl:true }).setView([48.5,10.5], 5);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  subdomains:'abcd', maxZoom:20
-}).addTo(map);
+
+const OSM_ATTR  = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const ESRI_ATTR = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>';
+
+const BASEMAPS = {
+  'Streets': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: OSM_ATTR, maxZoom: 19
+  }),
+  'Light': L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    attribution: OSM_ATTR, subdomains: 'ab', maxZoom: 20
+  }),
+  'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: ESRI_ATTR, maxZoom: 19
+  }),
+};
+
+// Remember the last basemap the user picked
+const BASEMAP_KEY = 'runcreator.basemap';
+let _savedBase;
+try { _savedBase = localStorage.getItem(BASEMAP_KEY); } catch { _savedBase = null; }
+(BASEMAPS[_savedBase] || BASEMAPS['Streets']).addTo(map);
+
+L.control.layers(BASEMAPS, null, { position: 'topright' }).addTo(map);
+map.on('baselayerchange', e => {
+  try { localStorage.setItem(BASEMAP_KEY, e.name); } catch { /* storage blocked */ }
+});
 
 // ── Sidebar drag-to-resize ──────────────────────────────────────
 (function() {
