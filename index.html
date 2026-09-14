@@ -1873,9 +1873,15 @@ function resetApp() {
 }
 
 // ── Quick random run ───────────────────────────────────────────
-// Creates a demo run near Leganés/Madrid (40.524335, -3.658831)
-// with 3 stops already configured, then jumps to step 2.
+// Builds the stops around the warehouse the user already placed (and keeps
+// their Site External ID). If either is missing, falls back to the default
+// demo site near Leganés/Madrid (Site01 — 40.524335, -3.658831).
 function createQuickRun() {
+  // 0. Remember what the user already defined — the reset below wipes it
+  const keptSiteId = document.getElementById('siteId').value.trim();
+  const keptLat    = S.site ? S.site.lat : null;
+  const keptLng    = S.site ? S.site.lng : null;
+
   // 1. Silent reset (no confirm needed — this is a fresh demo)
   if (S.site?.marker) map.removeLayer(S.site.marker);
   S.stops.forEach(s => map.removeLayer(s.marker));
@@ -1898,9 +1904,10 @@ function createQuickRun() {
   document.getElementById('api-response').style.display = 'none';
   renderRunPhasesUI();
 
-  // 2. Place warehouse
-  const siteLat = 40.524335, siteLng = -3.658831;
-  document.getElementById('siteId').value = 'Site01';
+  // 2. Place warehouse — reuse what the user already set, else the demo default
+  const siteLat = keptLat ?? 40.524335;
+  const siteLng = keptLng ?? -3.658831;
+  document.getElementById('siteId').value = keptSiteId || 'Site01';
   document.getElementById('siteId').style.borderColor = '';
   placeSite(siteLat, siteLng);   // sets S.site and triggers geocode
 
@@ -1924,12 +1931,14 @@ function createQuickRun() {
   const numStops = Math.max(1, parseInt(document.getElementById('quick-run-stops').value) || 3);
 
   // 6. Position helper — evenly spread around the site, random base rotation
-  // 1 deg lat ≈ 111 km, 1 deg lng ≈ 83 km at Madrid latitude
+  // 1 deg lat ≈ 111 km; 1 deg lng ≈ 111·cos(lat) km, so stretch lng by 1/cos(lat)
+  // to keep the ring circular wherever the warehouse actually is.
+  const lngScale  = 1 / Math.max(0.2, Math.cos(siteLat * Math.PI / 180));
   const baseAngle = Math.random() * 360;
   const stopPos = (i) => {
     const r = 0.045 + Math.random() * 0.155; // ~5–22 km (anywhere between site and max radius)
     const a = (baseAngle + (360 / numStops) * i + (Math.random() - 0.5) * 20) * Math.PI / 180;
-    return { dlat: Math.sin(a) * r, dlng: Math.cos(a) * r * (111 / 83) };
+    return { dlat: Math.sin(a) * r, dlng: Math.cos(a) * r * lngScale };
   };
 
   // 3 service templates — cycled via modulo so any number of stops works
