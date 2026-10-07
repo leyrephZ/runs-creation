@@ -1493,12 +1493,19 @@ function itemsBlock(svc, extId, useContainers=false) {
   }
   return `\n        <ItemListImport>${xml}\n        </ItemListImport>`;
 }
-function itemsBlock_IT(colExtId, colItems, useContainers=false) {
+// Items of an internal-transfer delivery.
+// Their ExternalIds MUST be derived from the delivery's own extId, never from
+// the source collection's: <Container> is resolved by ExternalId (xs:string in
+// the XSD), so reusing the collection's item ids would put two different items
+// — one container in the collection, one in the delivery — under the same
+// identity, and the backend would bind the child to the wrong container.
+// The link back to the collection is carried by InternalTransferExternalId.
+function itemsBlock_IT(delExtId, colExtId, colItems, useContainers=false) {
   let xml='';
   const withContainer = useContainers && colItems > 1;
-  const ctnId = `item_${colExtId}_1`;
+  const ctnId = `item_${delExtId}_1`;
   for (let i=1;i<=colItems;i++) {
-    const itemExtId = `item_${colExtId}_${i}`;
+    const itemExtId = `item_${delExtId}_${i}`;
     if (withContainer && i===1)
       xml+=`\n          <ItemImport>
             <ExternalId>${itemExtId}</ExternalId>
@@ -1529,7 +1536,7 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}, 
   const extId  = `del_${sid}_${dt}_${stopSeq}_${svcSeq}`;
   const stopId = escX(stop.customerName);
   const itSrc  = svc.internalTransferSrcId ? colInfoMap[svc.internalTransferSrcId] : null;
-  const items  = itSrc ? itemsBlock_IT(itSrc.extId, itSrc.items, useContainers) : itemsBlock(svc, extId, useContainers);
+  const items  = itSrc ? itemsBlock_IT(extId, itSrc.extId, itSrc.items, useContainers) : itemsBlock(svc, extId, useContainers);
   return `
       <DeliveryImport>
         <SiteId>${escX(sid)}</SiteId>
