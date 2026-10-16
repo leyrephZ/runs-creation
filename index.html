@@ -1289,13 +1289,20 @@ function buildXML() {
   const now = new Date();
   const dt  = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const sid    = S.site.externalId;
-  const runExtId = `demorun_${sid}_${dt}`;
+
+  // Long distance → LD_ prefix on the run's ExternalId and Name, so these runs
+  // are recognisable at a glance. Also drives <DestinationSite> and <RunType>.
+  const longDistance = document.getElementById('runLongDistance').checked;
+  const destSiteVal  = document.getElementById('runDestSite').value.trim();
+  const ldPrefix = s => (longDistance && !/^LD_/i.test(s)) ? `LD_${s}` : s;
+
+  const runExtId = ldPrefix(`demorun_${sid}_${dt}`);
 
   // Store for barcode modal
   S.lastDt = dt; S.lastSid = sid; S.lastRunExtId = runExtId;
 
   // Run settings from step 1
-  const runNameVal    = document.getElementById('runName').value.trim() || `demorun_${dt}`;
+  const runNameVal    = ldPrefix(document.getElementById('runName').value.trim() || `demorun_${dt}`);
   const runDateVal    = document.getElementById('runDate').value;
   const driverVal     = document.getElementById('runDriver').value.trim();
   const vehicleVal    = document.getElementById('runVehicle').value.trim();
@@ -1308,10 +1315,6 @@ function buildXML() {
   // Run-level phase actions XML
   const runPhasesXml  = RUN_PHASES.map(genRunPhaseXml).join('');
   const useContainers = document.getElementById('runContainers').checked;
-
-  // Long distance → <DestinationSite> (right after SiteId) + <RunType>
-  const longDistance = document.getElementById('runLongDistance').checked;
-  const destSiteVal  = document.getElementById('runDestSite').value.trim();
 
   /* ── RunImport (XSD order) ── */
   const runXml = `  <RunListImport>
