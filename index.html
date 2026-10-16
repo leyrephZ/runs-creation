@@ -397,10 +397,20 @@
                 <input type="text" id="runTagId" placeholder="Tag ID" autocomplete="off"/>
               </div>
             </div>
-            <!-- Containers checkbox -->
+            <!-- Containers + Long distance checkboxes -->
             <div class="allow-unknown-row" style="margin-top:4px">
               <input type="checkbox" id="runContainers" style="accent-color:#19427C;width:14px;height:14px"/>
               <label for="runContainers" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer">Containers</label>
+            </div>
+            <div class="allow-unknown-row" style="margin-top:4px">
+              <input type="checkbox" id="runLongDistance" onchange="onLongDistanceChange()" style="accent-color:#19427C;width:14px;height:14px"/>
+              <label for="runLongDistance" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer">Long distance</label>
+            </div>
+            <!-- Destination site — only for long-distance runs -->
+            <div class="form-group" id="dest-site-wrap" style="display:none;margin-top:8px;margin-bottom:0">
+              <label>Destination Site *</label>
+              <input type="text" id="runDestSite" placeholder="e.g. WAREHOUSE_BCN_02" oninput="onDestSiteChange()" autocomplete="off"/>
+              <div class="hint">External ID of the destination site</div>
             </div>
           </div>
         </div>
@@ -756,6 +766,22 @@ function onSiteIdChange() {
   const val = el.value.trim();
   el.style.borderColor = val ? '' : '#e74c3c';
   if (S.site) S.site.externalId = val;
+}
+
+// ── Long distance ──────────────────────────────────────────
+// Shows the destination site field; the run then carries
+// <DestinationSite> and <RunType>LongDistance</RunType>.
+function onLongDistanceChange() {
+  const on = document.getElementById('runLongDistance').checked;
+  document.getElementById('dest-site-wrap').style.display = on ? '' : 'none';
+  onDestSiteChange();
+  if (S.step === 3) buildXML();
+}
+function onDestSiteChange() {
+  const on = document.getElementById('runLongDistance').checked;
+  const el = document.getElementById('runDestSite');
+  el.style.borderColor = (on && !el.value.trim()) ? '#e74c3c' : '';
+  if (S.step === 3) buildXML();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1181,7 +1207,17 @@ function updITSource(svcId, val) {
 function goNext() {
   if (S.step===1) {
     const id = document.getElementById('siteId').value.trim();
-    if (!S.site || !id) { document.getElementById('p1-warn').style.display='block'; return; }
+    if (!S.site || !id) {
+      showWarn('p1-warn','⚠ Please place the warehouse on the map and enter a Site External ID.');
+      return;
+    }
+    // Destination Site is mandatory on a long-distance run
+    if (document.getElementById('runLongDistance').checked
+        && !document.getElementById('runDestSite').value.trim()) {
+      showWarn('p1-warn','⚠ A long-distance run needs a Destination Site external ID.');
+      document.getElementById('runDestSite').focus();
+      return;
+    }
     S.site.externalId = id;
     S.site.address    = document.getElementById('siteAddr').value.trim() || S.site.address;
     setStep(2);
@@ -1273,15 +1309,21 @@ function buildXML() {
   const runPhasesXml  = RUN_PHASES.map(genRunPhaseXml).join('');
   const useContainers = document.getElementById('runContainers').checked;
 
+  // Long distance → <DestinationSite> (right after SiteId) + <RunType>
+  const longDistance = document.getElementById('runLongDistance').checked;
+  const destSiteVal  = document.getElementById('runDestSite').value.trim();
+
   /* ── RunImport (XSD order) ── */
   const runXml = `  <RunListImport>
     <RunImport>
-      <SiteId>${escX(sid)}</SiteId>
+      <SiteId>${escX(sid)}</SiteId>${longDistance && destSiteVal ? `
+      <DestinationSite>${escX(destSiteVal)}</DestinationSite>` : ''}
       <OperationType>New</OperationType>
       <ExternalId>${escX(runExtId)}</ExternalId>
       <Name>${escX(runNameVal)}</Name>${runDateXml ? `
       <RunDate>${escX(runDateXml)}</RunDate>` : ''}
-      <Status>New</Status>${driverVal  ? `\n      <Driver>${escX(driverVal)}</Driver>`   : ''}${vehicleVal ? `\n      <Vehicle>${escX(vehicleVal)}</Vehicle>` : ''}
+      <Status>New</Status>${driverVal  ? `\n      <Driver>${escX(driverVal)}</Driver>`   : ''}${vehicleVal ? `\n      <Vehicle>${escX(vehicleVal)}</Vehicle>` : ''}${longDistance ? `
+      <RunType>LongDistance</RunType>` : ''}
       <UnloadProcess>${unloadProcess}</UnloadProcess>${tagIdVal ? `
       <TagsListImport>
         <TagImport>
@@ -1589,6 +1631,9 @@ const ACT_XSD_ORDER  = ['TakeAPictureImport','SignatureImport','ChargeOfDelivery
 const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','DeliveryType','ItemListImport','Actions'];
 const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
 const SVC_LIST_ORDER  = ['CollectionListImport','DeliveryListImport'];
+// RunImport xs:sequence (StandardImport v4.17). Only the elements this app can
+// emit need to be listed, but keeping the full order makes misplacement obvious.
+const RUN_FIELD_ORDER = ['CompanyId','RegionId','SiteId','DestinationSite','OperationType','ExternalId','Name','Description','Scancode','RunDate','PlannedDate','Status','Mandatory','Resequence','Driver','Vehicle','TotalADRPoints','RunType','UnloadProcess','TransferLevel','StealLevel','ShowStealConfirmationPopup','InitialPin','RunEndDate','PlannedFinishDate','TourId','TourType','TheoreticalKM','RealKM','TheoreticalStartOfLoading','TheoreticalEndOfLoading','PlannedEndOfLoadingDate','TheoreticalPrice','RateId','DefaultSubcontractorId','ExternalRateId','LoadingProcess','TagsListImport','AcceptRun','BeforeUnload','StartOfRun','EndOfRun','LoadRun'];
 
 function checkOrder(children, expected, ctx) {
   const errors=[]; let lastIdx=-1;
@@ -1611,6 +1656,11 @@ function runValidation(xmlStr) {
   if (!runs.length) errors.push('Missing &lt;RunImport&gt;');
   runs.forEach((r,i)=>{
     ['SiteId','OperationType','ExternalId','Status'].forEach(f=>{ if(!r.querySelector(f)?.textContent?.trim()) errors.push(`RunImport[${i+1}]: missing &lt;${f}&gt;`); });
+    errors.push(...checkOrder([...r.children].map(c=>c.tagName), RUN_FIELD_ORDER, `RunImport[${i+1}]`));
+    // A long-distance run needs its destination
+    if (r.querySelector('RunType')?.textContent?.trim()==='LongDistance'
+        && !r.querySelector('DestinationSite')?.textContent?.trim())
+      errors.push(`RunImport[${i+1}]: LongDistance run is missing &lt;DestinationSite&gt;`);
   });
 
   const svcList=doc.querySelector('ServicesImportList');
@@ -1856,10 +1906,12 @@ function resetApp() {
   _xmlString = '';
 
   // Reset form fields
-  ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId']
+  ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId','runDestSite']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('runUnloadProcess').checked = true;
   document.getElementById('runContainers').checked = false;
+  document.getElementById('runLongDistance').checked = false;
+  onLongDistanceChange();
   document.getElementById('site-coords-wrap').style.display = 'none';
   document.getElementById('p1-warn').style.display = 'none';
   document.getElementById('api-response').style.display = 'none';
@@ -1917,6 +1969,12 @@ function createQuickRun() {
   document.getElementById('siteId').value = keptSiteId || 'Site01';
   document.getElementById('siteId').style.borderColor = '';
   placeSite(siteLat, siteLng);   // sets S.site and triggers geocode
+
+  // 2b. Long distance stays the user's choice; the demo destination is Site02
+  if (document.getElementById('runLongDistance').checked) {
+    document.getElementById('runDestSite').value = 'Site02';
+  }
+  onLongDistanceChange();
 
   // 3. Run name / date
   const now = new Date();
@@ -2235,6 +2293,14 @@ function cancelAPI() {
 
 async function sendToAPI() {
   if (!_xmlString) { alert('Generate the XML first (go to step 3).'); return; }
+
+  // Never ship a run that fails our own XSD checks (field order, required fields)
+  const xmlErrors = runValidation(_xmlString);
+  if (xmlErrors.length) {
+    alert('The XML does not pass validation, so it was not sent:\n\n'
+      + xmlErrors.map(e => '• ' + e.replace(/&lt;/g,'<').replace(/&gt;/g,'>')).join('\n'));
+    return;
+  }
 
   const tenantKey  = document.getElementById('api-tenant').value;
   const tenant     = API_TENANTS[tenantKey];
