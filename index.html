@@ -406,6 +406,16 @@
               <input type="checkbox" id="runLongDistance" onchange="onLongDistanceChange()" style="accent-color:#19427C;width:14px;height:14px"/>
               <label for="runLongDistance" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer">Long distance</label>
             </div>
+            <div class="allow-unknown-row" style="margin-top:4px">
+              <input type="checkbox" id="runItemTypes" onchange="onItemTypesChange()" style="accent-color:#19427C;width:14px;height:14px"/>
+              <label for="runItemTypes" style="font-size:12px;font-weight:600;color:#34495e;cursor:pointer">Item types</label>
+            </div>
+            <!-- Item types — assigned at random across the run's items -->
+            <div class="form-group" id="item-types-wrap" style="display:none;margin-top:8px;margin-bottom:0">
+              <label>Item Types *</label>
+              <input type="text" id="runItemTypesList" placeholder="Document, Box, Fridge" oninput="onItemTypesListChange()" autocomplete="off"/>
+              <div class="hint">Comma-separated; each item gets one at random</div>
+            </div>
             <!-- Destination site — only for long-distance runs -->
             <div class="form-group" id="dest-site-wrap" style="display:none;margin-top:8px;margin-bottom:0">
               <label>Destination Site *</label>
@@ -782,6 +792,42 @@ function onDestSiteChange() {
   const el = document.getElementById('runDestSite');
   el.style.borderColor = (on && !el.value.trim()) ? '#e74c3c' : '';
   if (S.step === 3) buildXML();
+}
+
+// ── Item types ─────────────────────────────────────────────
+// When enabled, every item gets an <ItemType> picked from this list.
+const QUICK_RUN_ITEM_TYPES = 'Document, Box, Fridge';
+
+function onItemTypesChange() {
+  const on = document.getElementById('runItemTypes').checked;
+  document.getElementById('item-types-wrap').style.display = on ? '' : 'none';
+  onItemTypesListChange();
+}
+function onItemTypesListChange() {
+  const on = document.getElementById('runItemTypes').checked;
+  const el = document.getElementById('runItemTypesList');
+  el.style.borderColor = (on && !getItemTypes().length) ? '#e74c3c' : '';
+  if (S.step === 3) buildXML();
+}
+// Configured types, cleaned up. Empty array = don't emit <ItemType> at all.
+function getItemTypes() {
+  if (!document.getElementById('runItemTypes').checked) return [];
+  return document.getElementById('runItemTypesList').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+}
+// Pick a type for one item. Keyed off the item's ExternalId so the choice is
+// spread across the list but stable for a given item within a build, instead of
+// reshuffling every time the XML is regenerated.
+function itemTypeFor(itemExtId, types) {
+  if (!types || !types.length) return '';
+  let h = 0;
+  for (let i = 0; i < itemExtId.length; i++) h = (h * 31 + itemExtId.charCodeAt(i)) >>> 0;
+  return types[h % types.length];
+}
+// <ItemType> sits between <Status> and <Container> in the ItemImport sequence.
+function itemTypeXml(itemExtId, types) {
+  const t = itemTypeFor(itemExtId, types);
+  return t ? `\n            <ItemType>${escX(t)}</ItemType>` : '';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1315,6 +1361,7 @@ function buildXML() {
   // Run-level phase actions XML
   const runPhasesXml  = RUN_PHASES.map(genRunPhaseXml).join('');
   const useContainers = document.getElementById('runContainers').checked;
+  const itemTypes     = getItemTypes();
 
   /* ── RunImport (XSD order) ── */
   const runXml = `  <RunListImport>
@@ -1355,11 +1402,11 @@ function buildXML() {
   // ⚠ XSD order: CollectionListImport BEFORE DeliveryListImport
   let colBlock = '', delBlock = '';
   if (allCol.length) {
-    const body = allCol.map(({ stop,svc,stopSeq,svcSeq }) => genCollection(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,useContainers)).join('');
+    const body = allCol.map(({ stop,svc,stopSeq,svcSeq }) => genCollection(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,useContainers,itemTypes)).join('');
     colBlock = `\n    <CollectionListImport>${body}\n    </CollectionListImport>`;
   }
   if (allDel.length) {
-    const body = allDel.map(({ stop,svc,stopSeq,svcSeq }) => genDelivery(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,colInfoMap,useContainers)).join('');
+    const body = allDel.map(({ stop,svc,stopSeq,svcSeq }) => genDelivery(stop,svc,stopSeq,svcSeq,runExtId,sid,dt,colInfoMap,useContainers,itemTypes)).join('');
     delBlock = `\n    <DeliveryListImport>${body}\n    </DeliveryListImport>`;
   }
 
@@ -1514,27 +1561,31 @@ function genActions(svc, type) {
   return xml ? `\n        <Actions>${xml}\n        </Actions>` : '';
 }
 
-function itemsBlock(svc, extId, useContainers=false) {
+function itemsBlock(svc, extId, useContainers=false, itemTypes=[]) {
   let xml='';
   const withContainer = useContainers && svc.items > 1;
   const ctnId = `item_${extId}_1`;
   for (let i=1;i<=svc.items;i++) {
     const itemExtId = `item_${extId}_${i}`;
+    const typeXml   = itemTypeXml(itemExtId, itemTypes);
     if (withContainer && i===1)
       xml+=`\n          <ItemImport>
             <ExternalId>${itemExtId}</ExternalId>
-            <Status>New</Status>
+            <Status>New</Status>${typeXml}
             <IsContainer>true</IsContainer>
           </ItemImport>`;
     else if (withContainer)
       xml+=`\n          <ItemImport>
             <ExternalId>${itemExtId}</ExternalId>
-            <Status>New</Status>
+            <Status>New</Status>${typeXml}
             <Container>${ctnId}</Container>
             <IsContainer>false</IsContainer>
           </ItemImport>`;
     else
-      xml+=`\n          <ItemImport>\n            <ExternalId>${itemExtId}</ExternalId>\n            <Status>New</Status>\n          </ItemImport>`;
+      xml+=`\n          <ItemImport>
+            <ExternalId>${itemExtId}</ExternalId>
+            <Status>New</Status>${typeXml}
+          </ItemImport>`;
   }
   return `\n        <ItemListImport>${xml}\n        </ItemListImport>`;
 }
@@ -1545,23 +1596,24 @@ function itemsBlock(svc, extId, useContainers=false) {
 // — one container in the collection, one in the delivery — under the same
 // identity, and the backend would bind the child to the wrong container.
 // The link back to the collection is carried by InternalTransferExternalId.
-function itemsBlock_IT(delExtId, colExtId, colItems, useContainers=false) {
+function itemsBlock_IT(delExtId, colExtId, colItems, useContainers=false, itemTypes=[]) {
   let xml='';
   const withContainer = useContainers && colItems > 1;
   const ctnId = `item_${delExtId}_1`;
   for (let i=1;i<=colItems;i++) {
     const itemExtId = `item_${delExtId}_${i}`;
+    const typeXml   = itemTypeXml(itemExtId, itemTypes);
     if (withContainer && i===1)
       xml+=`\n          <ItemImport>
             <ExternalId>${itemExtId}</ExternalId>
-            <Status>New</Status>
+            <Status>New</Status>${typeXml}
             <IsContainer>true</IsContainer>
             <InternalTransferExternalId>${escX(colExtId)}</InternalTransferExternalId>
           </ItemImport>`;
     else if (withContainer)
       xml+=`\n          <ItemImport>
             <ExternalId>${itemExtId}</ExternalId>
-            <Status>New</Status>
+            <Status>New</Status>${typeXml}
             <Container>${ctnId}</Container>
             <IsContainer>false</IsContainer>
             <InternalTransferExternalId>${escX(colExtId)}</InternalTransferExternalId>
@@ -1569,7 +1621,7 @@ function itemsBlock_IT(delExtId, colExtId, colItems, useContainers=false) {
     else
       xml+=`\n          <ItemImport>
             <ExternalId>${itemExtId}</ExternalId>
-            <Status>New</Status>
+            <Status>New</Status>${typeXml}
             <InternalTransferExternalId>${escX(colExtId)}</InternalTransferExternalId>
           </ItemImport>`;
   }
@@ -1577,11 +1629,11 @@ function itemsBlock_IT(delExtId, colExtId, colItems, useContainers=false) {
 }
 
 // DeliveryImport — XSD order
-function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}, useContainers=false) {
+function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}, useContainers=false, itemTypes=[]) {
   const extId  = `del_${sid}_${dt}_${stopSeq}_${svcSeq}`;
   const stopId = escX(stop.customerName);
   const itSrc  = svc.internalTransferSrcId ? colInfoMap[svc.internalTransferSrcId] : null;
-  const items  = itSrc ? itemsBlock_IT(extId, itSrc.extId, itSrc.items, useContainers) : itemsBlock(svc, extId, useContainers);
+  const items  = itSrc ? itemsBlock_IT(extId, itSrc.extId, itSrc.items, useContainers, itemTypes) : itemsBlock(svc, extId, useContainers, itemTypes);
   return `
       <DeliveryImport>
         <SiteId>${escX(sid)}</SiteId>
@@ -1603,7 +1655,7 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}, 
 }
 
 // CollectionImport — XSD order (AllowCollectingUnknownItems after CollectionType)
-function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers=false) {
+function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers=false, itemTypes=[]) {
   const extId  = `col_${sid}_${dt}_${stopSeq}_${svcSeq}`;
   const stopId = escX(stop.customerName);
   return `
@@ -1623,7 +1675,7 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers
         </GPSPoints>
         <Status>New</Status>
         <CollectionType>${svc.isInternalTransfer ? 'InternalTransfer' : 'Collection'}</CollectionType>
-        <AllowCollectingUnknownItems>${svc.allowUnknown ? 'true' : 'false'}</AllowCollectingUnknownItems>${itemsBlock(svc,extId,useContainers)}${genActions(svc,'col')}
+        <AllowCollectingUnknownItems>${svc.allowUnknown ? 'true' : 'false'}</AllowCollectingUnknownItems>${itemsBlock(svc,extId,useContainers,itemTypes)}${genActions(svc,'col')}
       </CollectionImport>`;
 }
 
@@ -1634,6 +1686,9 @@ const ACT_XSD_ORDER  = ['TakeAPictureImport','SignatureImport','ChargeOfDelivery
 const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','DeliveryType','ItemListImport','Actions'];
 const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
 const SVC_LIST_ORDER  = ['CollectionListImport','DeliveryListImport'];
+// ItemImport xs:sequence (StandardImport v4.17), shared by deliveries and
+// collections apart from GenerateInternalTransfer / InternalTransferExternalId.
+const ITEM_FIELD_ORDER = ['ExternalId','ArticleId','ProductId','GTIN','SKU','Serial','Description','Weight','Volume','Dimensions','UnitType','Status','UpdateDate','ReadingType','ItemType','AdditionalInfo','ADRType','ADRPoints','TracknTrace','ExpectedQuantity','Required','Container','Box','WarehouseInformation','IsContainer','GenerateInternalTransfer','LoadingExpectedQuantity','InternalTransferExternalId','LoadScanType','ItemIconListImport','TemperatureControls'];
 // RunImport xs:sequence (StandardImport v4.17). Only the elements this app can
 // emit need to be listed, but keeping the full order makes misplacement obvious.
 const RUN_FIELD_ORDER = ['CompanyId','RegionId','SiteId','DestinationSite','OperationType','ExternalId','Name','Description','Scancode','RunDate','PlannedDate','Status','Mandatory','Resequence','Driver','Vehicle','TotalADRPoints','RunType','UnloadProcess','TransferLevel','StealLevel','ShowStealConfirmationPopup','InitialPin','RunEndDate','PlannedFinishDate','TourId','TourType','TheoreticalKM','RealKM','TheoreticalStartOfLoading','TheoreticalEndOfLoading','PlannedEndOfLoadingDate','TheoreticalPrice','RateId','DefaultSubcontractorId','ExternalRateId','LoadingProcess','TagsListImport','AcceptRun','BeforeUnload','StartOfRun','EndOfRun','LoadRun'];
@@ -1677,6 +1732,7 @@ function runValidation(xmlStr) {
     [...d.querySelectorAll('ItemImport')].forEach((it,j)=>{
       if (!it.querySelector('ExternalId')?.textContent?.trim()) errors.push(`${lbl} ItemImport[${j+1}]: missing ExternalId`);
       if (!it.querySelector('Status')?.textContent?.trim())     errors.push(`${lbl} ItemImport[${j+1}]: missing Status`);
+      errors.push(...checkOrder([...it.children].map(c=>c.tagName), ITEM_FIELD_ORDER, `${lbl} ItemImport[${j+1}]`));
     });
     const actEl=d.querySelector('Actions');
     if (actEl) errors.push(...checkOrder([...actEl.children].map(c=>c.tagName), ACT_XSD_ORDER, `${lbl}>Actions`));
@@ -1690,6 +1746,7 @@ function runValidation(xmlStr) {
     [...c.querySelectorAll('ItemImport')].forEach((it,j)=>{
       if (!it.querySelector('ExternalId')?.textContent?.trim()) errors.push(`${lbl} ItemImport[${j+1}]: missing ExternalId`);
       if (!it.querySelector('Status')?.textContent?.trim())     errors.push(`${lbl} ItemImport[${j+1}]: missing Status`);
+      errors.push(...checkOrder([...it.children].map(el=>el.tagName), ITEM_FIELD_ORDER, `${lbl} ItemImport[${j+1}]`));
     });
     const actEl=c.querySelector('Actions');
     if (actEl) errors.push(...checkOrder([...actEl.children].map(el=>el.tagName), ACT_XSD_ORDER, `${lbl}>Actions`));
@@ -1909,12 +1966,14 @@ function resetApp() {
   _xmlString = '';
 
   // Reset form fields
-  ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId','runDestSite']
+  ['siteId','siteAddr','siteCoords','runName','runDriver','runVehicle','runTagId','runDestSite','runItemTypesList']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('runUnloadProcess').checked = true;
   document.getElementById('runContainers').checked = false;
   document.getElementById('runLongDistance').checked = false;
+  document.getElementById('runItemTypes').checked = false;
   onLongDistanceChange();
+  onItemTypesChange();
   document.getElementById('site-coords-wrap').style.display = 'none';
   document.getElementById('p1-warn').style.display = 'none';
   document.getElementById('api-response').style.display = 'none';
@@ -1978,6 +2037,14 @@ function createQuickRun() {
     document.getElementById('runDestSite').value = 'Site02';
   }
   onLongDistanceChange();
+
+  // 2c. Item types on by default, but respect a list the user already set
+  const itTypesEl = document.getElementById('runItemTypesList');
+  if (!document.getElementById('runItemTypes').checked || !getItemTypes().length) {
+    document.getElementById('runItemTypes').checked = true;
+    if (!itTypesEl.value.trim()) itTypesEl.value = QUICK_RUN_ITEM_TYPES;
+  }
+  onItemTypesChange();
 
   // 3. Run name / date
   const now = new Date();
