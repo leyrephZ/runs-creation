@@ -637,7 +637,7 @@ const emptyColAct = () => ({
   link:      { enabled:false, url:'' },
 });
 
-const newDel = () => ({ svcId:S.nextSvcId++, items:1, pta:'', internalTransferSrcId:null, actions:emptyDelAct() });
+const newDel = () => ({ svcId:S.nextSvcId++, items:1, pta:'', internalTransferSrcId:null, isMandatory:false, actions:emptyDelAct() });
 const newCol = () => ({ svcId:S.nextSvcId++, items:1, isInternalTransfer:false, allowUnknown:false, pta:'', actions:emptyColAct() });
 
 // ══════════════════════════════════════════════════════════════
@@ -1650,7 +1650,8 @@ function genDelivery(stop, svc, stopSeq, svcSeq, runId, sid, dt, colInfoMap={}, 
           <GeofencingThreshold>50</GeofencingThreshold>
         </GPSPoints>
         <Status>New</Status>
-        <DeliveryType>Delivery</DeliveryType>${items}${genActions(svc,'del')}
+        <DeliveryType>Delivery</DeliveryType>${svc.isMandatory ? `
+        <IsMandatory>true</IsMandatory>` : ''}${items}${genActions(svc,'del')}
       </DeliveryImport>`;
 }
 
@@ -1683,7 +1684,7 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers
 // XML VALIDATION (internal)
 // ══════════════════════════════════════════════════════════════
 const ACT_XSD_ORDER  = ['TakeAPictureImport','SignatureImport','ChargeOfDelivery','ProofOfPresence','Comment','Asset','Questionnaire','PinCode','ScanDocument','OpenLink'];
-const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','DeliveryType','ItemListImport','Actions'];
+const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','DeliveryType','IsMandatory','ItemListImport','Actions'];
 const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
 const SVC_LIST_ORDER  = ['CollectionListImport','DeliveryListImport'];
 // ItemImport xs:sequence (StandardImport v4.17), shared by deliveries and
@@ -2165,6 +2166,10 @@ function createQuickRun() {
       stop.address = display; stop.addrParsed = parsed;
     });
   }
+
+  // 7a. Always ship one mandatory delivery in the demo
+  const firstDel = S.stops.flatMap(s => s.deliveries)[0];
+  if (firstDel) firstDel.isMandatory = true;
 
   // 7. Assign PTAs — run date + 30 min per stop, distributed across all stops
   const runDateVal = document.getElementById('runDate').value; // "YYYY-MM-DDTHH:MM"
