@@ -638,7 +638,7 @@ const emptyColAct = () => ({
 });
 
 const newDel = () => ({ svcId:S.nextSvcId++, items:1, pta:'', internalTransferSrcId:null, isMandatory:false, actions:emptyDelAct() });
-const newCol = () => ({ svcId:S.nextSvcId++, items:1, isInternalTransfer:false, allowUnknown:false, pta:'', actions:emptyColAct() });
+const newCol = () => ({ svcId:S.nextSvcId++, items:1, isInternalTransfer:false, allowUnknown:false, pta:'', isMandatory:false, actions:emptyColAct() });
 
 // ══════════════════════════════════════════════════════════════
 // MAP — key-free tile providers (CARTO now watermarks without an API key)
@@ -949,7 +949,7 @@ function renderSvcCard(svc, type, idx, collapsed=false) {
     ? '&#8596; from IT source'
     : `${svc.items} item${svc.items!==1?'s':''}`;
   const itColNote = type==='col' && svc.isInternalTransfer ? ' · &#8596;' : '';
-  const subtitle = `${itemsLabel}${enabledActs?' · '+enabledActs+' action'+(enabledActs!==1?'s':''):''}${type==='col'&&svc.allowUnknown?' · unplanned':''}${itColNote}`;
+  const subtitle = `${itemsLabel}${enabledActs?' · '+enabledActs+' action'+(enabledActs!==1?'s':''):''}${type==='col'&&svc.allowUnknown?' · unplanned':''}${svc.isMandatory?' · mandatory':''}${itColNote}`;
 
   // Collection body extras
   const unknownToggle = type==='col' ? `
@@ -962,6 +962,13 @@ function renderSvcCard(svc, type, idx, collapsed=false) {
       <input type="checkbox" id="itc-${sid}" ${svc.isInternalTransfer?'checked':''} onchange="updIsInternalTransfer(${sid},this.checked)"/>
       <label for="itc-${sid}" style="color:#1a7a40;font-weight:700">&#8596; Internal Transfer</label>
     </div>` : '';
+
+  // Mandatory toggle — available on both deliveries and collections
+  const mandatoryToggle = `
+    <div class="allow-unknown-row" style="border-color:#f5c842;background:#fffdf5">
+      <input type="checkbox" id="man-${sid}" ${svc.isMandatory?'checked':''} onchange="updIsMandatory(${sid},'${type}',this.checked)"/>
+      <label for="man-${sid}" style="color:#9a7d0a;font-weight:700">&#9888; Mandatory</label>
+    </div>`;
 
   // Delivery body: IT source dropdown
   let itDropdown = '';
@@ -1018,6 +1025,7 @@ function renderSvcCard(svc, type, idx, collapsed=false) {
     </div>
     <div class="svc-card-body" id="scb-${sid}" style="display:${collapsed?'none':'block'}">
       ${itDropdown}
+      ${mandatoryToggle}
       ${unknownToggle}
       ${itColCheck}
       <div class="actions-title">Actions (IsMandatory = false)</div>
@@ -1100,6 +1108,10 @@ function adjItems(svcId, type, delta) {
 function updAllowUnknown(svcId, val) {
   const svc = getSvc(svcId, 'col');
   if (svc) svc.allowUnknown = val;
+}
+function updIsMandatory(svcId, type, val) {
+  const svc = getSvc(svcId, type);
+  if (svc) svc.isMandatory = val;
 }
 function addSvc(type) {
   const stop = S.stops.find(s=>s.id===S.editStopId);
@@ -1675,7 +1687,8 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers
           <GeofencingThreshold>50</GeofencingThreshold>
         </GPSPoints>
         <Status>New</Status>
-        <CollectionType>${svc.isInternalTransfer ? 'InternalTransfer' : 'Collection'}</CollectionType>
+        <CollectionType>${svc.isInternalTransfer ? 'InternalTransfer' : 'Collection'}</CollectionType>${svc.isMandatory ? `
+        <IsMandatory>true</IsMandatory>` : ''}
         <AllowCollectingUnknownItems>${svc.allowUnknown ? 'true' : 'false'}</AllowCollectingUnknownItems>${itemsBlock(svc,extId,useContainers,itemTypes)}${genActions(svc,'col')}
       </CollectionImport>`;
 }
@@ -1685,7 +1698,9 @@ function genCollection(stop, svc, stopSeq, svcSeq, runId, sid, dt, useContainers
 // ══════════════════════════════════════════════════════════════
 const ACT_XSD_ORDER  = ['TakeAPictureImport','SignatureImport','ChargeOfDelivery','ProofOfPresence','Comment','Asset','Questionnaire','PinCode','ScanDocument','OpenLink'];
 const DEL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','DeliveryType','IsMandatory','ItemListImport','Actions'];
-const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','CollectionType','AllowCollectingUnknownItems','ItemListImport','Actions'];
+// NB: in CollectionImport IsMandatory comes BEFORE AllowCollectingUnknownItems,
+// unlike DeliveryImport where it simply follows DeliveryType.
+const COL_FIELD_ORDER = ['SiteId','OperationType','ExternalId','RunId','Sequence','CustomerName','PTA','StopId','StopName','Address','GPSPoints','Status','CollectionType','IsMandatory','AllowCollectingUnknownItems','ItemListImport','Actions'];
 const SVC_LIST_ORDER  = ['CollectionListImport','DeliveryListImport'];
 // ItemImport xs:sequence (StandardImport v4.17), shared by deliveries and
 // collections apart from GenerateInternalTransfer / InternalTransferExternalId.
